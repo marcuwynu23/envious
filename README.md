@@ -1,6 +1,12 @@
-﻿# Envious
-
-Envious is a multi-application environment variable management system.
+﻿<div align="center">
+  <h1>Envious</h1>
+  <p>Multi-application environment variable manager (Go + SQLite)</p>
+  <p>
+    <img alt="Go" src="https://img.shields.io/badge/Go-1.21%2B%20%7C%201.23%2B-00ADD8?style=for-the-badge&logo=go&logoColor=white" />
+    <img alt="SQLite" src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" />
+    <img alt="Echo" src="https://img.shields.io/badge/Echo-4B32C3?style=for-the-badge" />
+  </p>
+</div>
 
 - **Web server** (`envious-web`): API + server-rendered admin dashboard, backed by SQLite
 - **CLI** (`envious-cli`): manages applications, environments, and variables via the web API
@@ -14,7 +20,6 @@ Envious is a multi-application environment variable management system.
 ```bash
 cd web
 ```
-
 
 ```bash
 go mod tidy
