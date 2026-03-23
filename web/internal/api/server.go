@@ -32,11 +32,7 @@ func New(store *storage.Storage, secret []byte) *Server {
 	e.Use(middleware.Logging())
 	e.Use(middleware.Recovery())
 	// Templates
-	if t, err := template.ParseGlob("views/*.html"); err == nil {
-		e.Renderer = &TemplateRegistry{templates: t}
-	} else {
-		e.Renderer = &TemplateRegistry{templates: template.Must(template.ParseFS(templatesFS, "templates/*.html"))}
-	}
+	e.Renderer = &TemplateRegistry{templates: template.Must(template.ParseFS(templatesFS, "templates/*.html"))}
 	// Routes
 	s.registerRoutes()
 	return s
@@ -84,7 +80,15 @@ type TemplateRegistry struct {
 }
 
 func (t *TemplateRegistry) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
+	if name == "layout.html" {
+		return t.templates.ExecuteTemplate(w, name, data)
+	}
+	return t.templates.ExecuteTemplate(w, "layout.html", LayoutData{Page: name, Data: data})
+}
+
+type LayoutData struct {
+	Page string
+	Data interface{}
 }
 
 // Session helpers
