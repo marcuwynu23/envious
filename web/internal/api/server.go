@@ -80,22 +80,14 @@ type TemplateRegistry struct {
 }
 
 func (t *TemplateRegistry) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	if name == "layout.html" {
-		return t.templates.ExecuteTemplate(w, name, data)
-	}
-	return t.templates.ExecuteTemplate(w, "layout.html", LayoutData{Page: name, Data: data})
-}
-
-type LayoutData struct {
-	Page string
-	Data interface{}
+	return t.templates.ExecuteTemplate(w, name, data)
 }
 
 // Session helpers
 func (s *Server) requireSession(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if !s.isAuthed(c) {
-			return c.Render(http.StatusOK, "login.html", map[string]any{"Error": ""})
+			return c.Render(http.StatusOK, "login.html", map[string]any{"Title": "Envious - Login", "Error": ""})
 		}
 		return next(c)
 	}
