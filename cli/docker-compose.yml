@@ -1,0 +1,7 @@
+version: "3.9"
+services:
+  envious-cli:
+    build: .
+    entrypoint: ["envious"]
+    command: ["--help"]
+
