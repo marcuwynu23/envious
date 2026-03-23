@@ -11,9 +11,10 @@ Envious is a multi-application environment variable management system.
 
 ## Run the server (web)
 
-From:
+```bash
+cd web
+```
 
-`d:\Projects\marcuwynu23\envious\web`
 
 ```bash
 go mod tidy
@@ -48,7 +49,9 @@ Keep this key safe. The server stores only a bcrypt hash.
 
 From:
 
-`d:\Projects\marcuwynu23\envious\cli`
+```bash
+cd cli
+```
 
 ```bash
 go mod tidy
