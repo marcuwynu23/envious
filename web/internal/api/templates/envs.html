@@ -1,33 +1,60 @@
-{{define "envs.html"}}
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Envious - Environments</title>
-  <style>body{font-family:Arial;margin:2rem} table{border-collapse:collapse} td,th{border:1px solid #ccc;padding:.5rem}</style>
-</head>
-<body>
-  <h1>Environments</h1>
-  <table>
-    <tr><th>ID</th><th>Name</th><th>Actions</th></tr>
-    {{range .Envs}}
-    <tr>
-      <td>{{.ID}}</td>
-      <td><a href="/envs/{{.ID}}">{{.Name}}</a></td>
-      <td>
-        <form method="post" action="/envs/{{.ID}}/delete" style="display:inline">
-          <button type="submit" onclick="return confirm('Delete environment?')">Delete</button>
-        </form>
-      </td>
-    </tr>
-    {{end}}
-  </table>
-  <h2>Create Environment</h2>
-  <form method="post" action="/envs">
-    <input name="name" placeholder="e.g. dev">
-    <button type="submit">Create</button>
-  </form>
-</body>
-</html>
-{{end}}
+{{define "envs.html"}} {{template "layout.head" .}}
+<div class="flex items-end justify-between gap-4">
+  <div>
+    <h1 class="text-lg font-semibold">Environments</h1>
+    <p class="mt-1 text-sm text-slate-600">
+      All environments across applications.
+    </p>
+  </div>
+  <a href="/" class="text-sm font-semibold text-slate-700 hover:underline"
+    >Applications</a
+  >
+</div>
 
+<div class="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="min-w-full">
+      <thead>
+        <tr
+          class="text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
+        >
+          <th class="px-4 py-3">Env ID</th>
+          <th class="px-4 py-3">App</th>
+          <th class="px-4 py-3">Name</th>
+          <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {{range .Envs}}
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-3 text-sm text-slate-500">{{.ID}}</td>
+          <td class="px-4 py-3 text-sm text-slate-600">App {{.AppID}}</td>
+          <td class="px-4 py-3 text-sm">
+            <a
+              href="/apps/{{.AppID}}/envs/{{.ID}}"
+              class="font-semibold text-slate-900 hover:underline"
+              >{{.Name}}</a
+            >
+          </td>
+          <td class="px-4 py-3 text-right">
+            <form
+              method="post"
+              action="/apps/{{.AppID}}/envs/{{.ID}}/delete"
+              class="inline"
+            >
+              <button
+                type="submit"
+                class="rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-50"
+                onclick="return confirm('Delete environment?');"
+              >
+                Delete
+              </button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{template "layout.foot" .}} {{end}}

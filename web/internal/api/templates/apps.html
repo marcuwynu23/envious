@@ -1,60 +1,75 @@
-{{define "apps.html"}}
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Envious - Applications</title>
-    <style>
-      body {
-        font-family: Arial;
-        margin: 2rem;
-      }
-      table {
-        border-collapse: collapse;
-      }
-      td,
-      th {
-        border: 1px solid #ccc;
-        padding: 0.5rem;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Applications</h1>
-    <table>
-      <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Actions</th>
-      </tr>
-      {{range .Apps}}
-      <tr>
-        <td>{{.ID}}</td>
-        <td><a href="/apps/{{.ID}}">{{.Name}}</a></td>
-        <td>
-          {{if ne .ID 1}}
-          <form
-            method="post"
-            action="/apps/{{.ID}}/delete"
-            style="display: inline"
-          >
-            <button
-              type="submit"
-              onclick="return confirm('Delete application?');"
-            >
-              Delete
-            </button>
-          </form>
-          {{end}}
-        </td>
-      </tr>
-      {{end}}
-    </table>
-    <h2>Create Application</h2>
-    <form method="post" action="/apps">
-      <input name="name" placeholder="e.g. billing-service" />
-      <button type="submit">Create</button>
+{{define "apps.html"}} {{template "layout.head" .}}
+<div class="flex items-end justify-between gap-4">
+  <div>
+    <h1 class="text-lg font-semibold">Applications</h1>
+    <p class="mt-1 text-sm text-slate-600">
+      Select an application to manage its environments and variables.
+    </p>
+  </div>
+</div>
+
+<div class="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+  <div
+    class="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50 p-4"
+  >
+    <form
+      method="post"
+      action="/apps"
+      class="flex flex-1 flex-wrap items-center gap-3"
+    >
+      <input
+        name="name"
+        placeholder="New application name (e.g. billing-service)"
+        class="min-w-[240px] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-200"
+      />
+      <button
+        type="submit"
+        class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+      >
+        Create
+      </button>
     </form>
-  </body>
-</html>
-{{end}}
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full">
+      <thead>
+        <tr
+          class="text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
+        >
+          <th class="px-4 py-3">ID</th>
+          <th class="px-4 py-3">Name</th>
+          <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {{range .Apps}}
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-3 text-sm text-slate-500">{{.ID}}</td>
+          <td class="px-4 py-3 text-sm">
+            <a
+              href="/apps/{{.ID}}"
+              class="font-semibold text-slate-900 hover:underline"
+              >{{.Name}}</a
+            >
+          </td>
+          <td class="px-4 py-3 text-right">
+            {{if ne .ID 1}}
+            <form method="post" action="/apps/{{.ID}}/delete" class="inline">
+              <button
+                type="submit"
+                class="rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-50"
+                onclick="return confirm('Delete application?');"
+              >
+                Delete
+              </button>
+            </form>
+            {{end}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{template "layout.foot" .}} {{end}}

@@ -1,20 +1,38 @@
 {{define "login.html"}}
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Envious Login</title>
-  <style>body{font-family:Arial;margin:2rem}.err{color:#b00}</style>
-</head>
-<body>
-  <h1>Envious</h1>
-  <p>Enter your API key to access the admin dashboard.</p>
-  {{if .Error}}<p class="err">{{.Error}}</p>{{end}}
-  <form method="post" action="/login">
-    <label>API Key <input type="password" name="api_key" style="width:320px"></label>
-    <button type="submit">Login</button>
-  </form>
-</body>
-</html>
-{{end}}
+{{template "layout.login.head" .}}
+<div class="w-full max-w-md">
+  <div class="rounded-2xl border border-white/10 bg-white shadow-2xl">
+    <div class="p-6">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-2xl bg-gradient-to-br from-sky-400 to-emerald-400"></div>
+        <div>
+          <div class="font-semibold leading-tight">Envious</div>
+          <div class="text-xs text-slate-500 leading-tight">Admin dashboard</div>
+        </div>
+      </div>
+      <p class="mt-4 text-sm text-slate-600">Login with your admin API key to manage applications, environments, and variables.</p>
 
+      {{if .Error}}
+        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{.Error}}</div>
+      {{end}}
+
+      <form method="post" action="/login" class="mt-5 space-y-3">
+        <label class="block">
+          <div class="text-xs font-medium text-slate-700">API Key</div>
+          <input
+            type="password"
+            name="api_key"
+            placeholder="Paste API key"
+            autocomplete="current-password"
+            class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-200"
+          />
+        </label>
+        <button type="submit" class="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">Continue</button>
+      </form>
+
+      <div class="mt-4 text-xs text-slate-500">API requests require <span class="font-mono">X-API-Key</span> and use <span class="font-mono">/api</span>.</div>
+    </div>
+  </div>
+</div>
+{{template "layout.login.foot" .}}
+{{end}}

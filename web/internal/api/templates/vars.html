@@ -1,63 +1,106 @@
-{{define "vars.html"}}
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Envious - {{.Env.Name}}</title>
-    <style>
-      body {
-        font-family: Arial;
-        margin: 2rem;
-      }
-      table {
-        border-collapse: collapse;
-      }
-      td,
-      th {
-        border: 1px solid #ccc;
-        padding: 0.5rem;
-      }
-      code {
-        background: #f6f8fa;
-        padding: 0.2rem 0.4rem;
-      }
-    </style>
-  </head>
-  <body>
-    <a href="/apps/{{.Env.AppID}}">← Back</a>
-    <h1>Environment: {{.Env.Name}}</h1>
-    <table>
-      <tr>
-        <th>Key</th>
-        <th>Value</th>
-        <th>Version</th>
-        <th>Actions</th>
-      </tr>
-      {{range .Vars}}
-      <tr>
-        <td><code>{{.Key}}</code></td>
-        <td><code>{{.Value}}</code></td>
-        <td>{{.Version}}</td>
-        <td>
-          <form
-            method="post"
-            action="/apps/{{$.Env.AppID}}/envs/{{$.Env.ID}}/vars/{{.Key}}/delete"
-            style="display: inline"
-          >
-            <button type="submit" onclick="return confirm('Delete variable?');">
-              Delete
-            </button>
-          </form>
-        </td>
-      </tr>
-      {{end}}
-    </table>
-    <h2>Add / Update Variable</h2>
-    <form method="post" action="/apps/{{.Env.AppID}}/envs/{{.Env.ID}}/vars">
-      <input name="key" placeholder="KEY" />
-      <input name="value" placeholder="value" />
-      <button type="submit">Save</button>
+{{define "vars.html"}} {{template "layout.head" .}}
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <div class="text-sm text-slate-500">
+      <a class="hover:underline" href="/">Applications</a>
+      <span class="mx-1">/</span>
+      <a class="hover:underline" href="/apps/{{.Env.AppID}}"
+        >App {{.Env.AppID}}</a
+      >
+      <span class="mx-1">/</span>
+      {{.Env.Name}}
+    </div>
+    <h1 class="mt-1 text-lg font-semibold">Variables</h1>
+    <p class="mt-1 text-sm text-slate-600">
+      Manage key/value pairs for this environment.
+    </p>
+  </div>
+  <div class="hidden sm:block text-sm text-slate-500">
+    Env ID: <span class="font-mono">{{.Env.ID}}</span>
+  </div>
+</div>
+
+<div class="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+  <div class="border-b border-slate-200 bg-slate-50 p-4">
+    <form
+      method="post"
+      action="/apps/{{.Env.AppID}}/envs/{{.Env.ID}}/vars"
+      class="grid gap-3 sm:grid-cols-3 sm:items-end"
+    >
+      <label class="block">
+        <div class="text-xs font-medium text-slate-700">Key</div>
+        <input
+          name="key"
+          placeholder="KEY"
+          class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-200"
+        />
+      </label>
+      <label class="block sm:col-span-2">
+        <div class="text-xs font-medium text-slate-700">Value</div>
+        <input
+          name="value"
+          placeholder="value"
+          class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-200"
+        />
+      </label>
+      <div class="sm:col-span-3 flex justify-end">
+        <button
+          type="submit"
+          class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+        >
+          Save
+        </button>
+      </div>
     </form>
-  </body>
-</html>
-{{end}}
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full">
+      <thead>
+        <tr
+          class="text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
+        >
+          <th class="px-4 py-3">Key</th>
+          <th class="px-4 py-3">Value</th>
+          <th class="px-4 py-3">Version</th>
+          <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {{range .Vars}}
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-3 text-sm">
+            <span
+              class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-xs"
+              >{{.Key}}</span
+            >
+          </td>
+          <td class="px-4 py-3 text-sm">
+            <span
+              class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-xs"
+              >{{.Value}}</span
+            >
+          </td>
+          <td class="px-4 py-3 text-sm text-slate-600">v{{.Version}}</td>
+          <td class="px-4 py-3 text-right">
+            <form
+              method="post"
+              action="/apps/{{$.Env.AppID}}/envs/{{$.Env.ID}}/vars/{{.Key}}/delete"
+              class="inline"
+            >
+              <button
+                type="submit"
+                class="rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-50"
+                onclick="return confirm('Delete variable?');"
+              >
+                Delete
+              </button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{template "layout.foot" .}} {{end}}
