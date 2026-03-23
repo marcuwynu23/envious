@@ -1,0 +1,20 @@
+{{define "login.html"}}
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Envious Login</title>
+  <style>body{font-family:Arial;margin:2rem}.err{color:#b00}</style>
+</head>
+<body>
+  <h1>Envious</h1>
+  <p>Enter your API key to access the admin dashboard.</p>
+  {{if .Error}}<p class="err">{{.Error}}</p>{{end}}
+  <form method="post" action="/login">
+    <label>API Key <input type="password" name="api_key" style="width:320px"></label>
+    <button type="submit">Login</button>
+  </form>
+</body>
+</html>
+{{end}}
+

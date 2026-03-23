@@ -1,0 +1,34 @@
+{{define "app_envs.html"}}
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Envious - {{.App.Name}}</title>
+  <style>body{font-family:Arial;margin:2rem} table{border-collapse:collapse} td,th{border:1px solid #ccc;padding:.5rem}</style>
+</head>
+<body>
+  <a href="/">← Applications</a>
+  <h1>Application: {{.App.Name}}</h1>
+  <table>
+    <tr><th>ID</th><th>Name</th><th>Actions</th></tr>
+    {{range .Envs}}
+    <tr>
+      <td>{{.ID}}</td>
+      <td><a href="/apps/{{$.App.ID}}/envs/{{.ID}}">{{.Name}}</a></td>
+      <td>
+        <form method="post" action="/apps/{{$.App.ID}}/envs/{{.ID}}/delete" style="display:inline">
+          <button type="submit" onclick="return confirm('Delete environment?')">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  <h2>Create Environment</h2>
+  <form method="post" action="/apps/{{.App.ID}}/envs">
+    <input name="name" placeholder="e.g. dev">
+    <button type="submit">Create</button>
+  </form>
+</body>
+</html>
+{{end}}
+

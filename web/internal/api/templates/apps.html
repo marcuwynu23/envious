@@ -1,0 +1,60 @@
+{{define "apps.html"}}
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Envious - Applications</title>
+    <style>
+      body {
+        font-family: Arial;
+        margin: 2rem;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        border: 1px solid #ccc;
+        padding: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Applications</h1>
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Actions</th>
+      </tr>
+      {{range .Apps}}
+      <tr>
+        <td>{{.ID}}</td>
+        <td><a href="/apps/{{.ID}}">{{.Name}}</a></td>
+        <td>
+          {{if ne .ID 1}}
+          <form
+            method="post"
+            action="/apps/{{.ID}}/delete"
+            style="display: inline"
+          >
+            <button
+              type="submit"
+              onclick="return confirm('Delete application?');"
+            >
+              Delete
+            </button>
+          </form>
+          {{end}}
+        </td>
+      </tr>
+      {{end}}
+    </table>
+    <h2>Create Application</h2>
+    <form method="post" action="/apps">
+      <input name="name" placeholder="e.g. billing-service" />
+      <button type="submit">Create</button>
+    </form>
+  </body>
+</html>
+{{end}}
