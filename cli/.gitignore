@@ -1,0 +1,34 @@
+# Binaries
+/app
+/app.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Build output
+/bin/
+/dist/
+/build/
+
+# Test and coverage
+*.test
+coverage.out
+coverage.html
+
+# Go workspace
+go.work
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config (if your CLI uses one)
+.config/
