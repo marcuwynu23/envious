@@ -12,24 +12,28 @@ else
 endif
 
 dev:
-	go run ./cmd/server
+	@go run ./cmd/server
 
 dev-watch:
-	air -c .air.toml
+	@air -c .air.toml
 
 start:
-	go run ./cmd/server
+	@go run ./cmd/server
 
 build:
-	mkdir -p $(DIST_DIR)
+	@echo "create dist directory if it doesn't exist"
+	@mkdir -p $(DIST_DIR)
+	@echo "build the binary"
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o $(OUTPUT) ./cmd/server
+	@echo "copy the templates directory"
+	@cp -r internal/api/templates $(DIST_DIR)/templates
 
 test:
-	go test ./...
+	@go test ./...
 
 deps:
-	go mod download
-	go mod tidy
+	@go mod download
+	@go mod tidy
 
 clean:
-	rm -rf $(DIST_DIR)
+	@rm -rf $(DIST_DIR)
