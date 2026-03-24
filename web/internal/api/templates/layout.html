@@ -9,30 +9,46 @@
   </head>
   <body class="bg-slate-50 text-slate-900">
     <header class="border-b border-slate-200 bg-white">
-      <div class="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between gap-4">
+      <div
+        class="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between gap-4"
+      >
         <a href="/" class="flex items-center gap-3 no-underline">
-          <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-sky-400 to-emerald-400"></div>
+          <div
+            class="h-9 w-9 rounded-xl bg-gradient-to-br from-sky-400 to-emerald-400"
+          ></div>
           <div>
             <div class="font-semibold leading-tight">Envious</div>
-            <div class="text-xs text-slate-500 leading-tight">Applications • Environments • Variables</div>
+            <div class="text-xs text-slate-500 leading-tight">
+              Applications • Environments • Variables
+            </div>
           </div>
         </a>
-        <div class="text-xs text-slate-500">API: <span class="font-mono">/api</span></div>
+        <div class="flex items-center gap-3">
+          <div class="text-xs text-slate-500">
+            API: <span class="font-mono">/api</span>
+          </div>
+          <form method="post" action="/logout">
+            <button
+              type="submit"
+              class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Logout
+            </button>
+          </form>
+        </div>
       </div>
     </header>
     <main class="mx-auto max-w-5xl px-6 py-8">
-{{end}}
-
-{{define "layout.foot"}}
+      {{end}} {{define "layout.foot"}}
     </main>
     <footer class="mx-auto max-w-5xl px-6 pb-10 text-xs text-slate-500">
-      <div class="border-t border-slate-200 pt-6">Envious • SQLite-backed secrets manager</div>
+      <div class="border-t border-slate-200 pt-6">
+        Envious • SQLite-backed secrets manager
+      </div>
     </footer>
   </body>
 </html>
-{{end}}
-
-{{define "layout.login.head"}}
+{{end}} {{define "layout.login.head"}}
 <!doctype html>
 <html lang="en">
   <head>
@@ -43,9 +59,7 @@
   </head>
   <body class="bg-slate-950 text-slate-50">
     <main class="min-h-screen flex items-center justify-center p-6">
-{{end}}
-
-{{define "layout.login.foot"}}
+      {{end}} {{define "layout.login.foot"}}
     </main>
   </body>
 </html>
