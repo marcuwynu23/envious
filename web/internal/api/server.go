@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"envious-web/internal/middleware"
@@ -407,6 +408,7 @@ func (s *Server) handleAdminApp(c echo.Context) error {
 	return c.Render(200, "app_envs.html", map[string]any{
 		"App":  app,
 		"Envs": envs,
+		"Error": "",
 	})
 }
 
@@ -432,10 +434,26 @@ func (s *Server) handleAdminCreateEnv(c echo.Context) error {
 		return c.Redirect(302, "/")
 	}
 	name := c.FormValue("name")
+	name = strings.TrimSpace(name)
 	if name == "" {
-		return c.Redirect(302, "/apps/"+c.Param("id"))
+		app, _ := s.Store.GetApp(c.Request().Context(), appID)
+		envs, _ := s.Store.ListEnvs(c.Request().Context(), appID)
+		return c.Render(200, "app_envs.html", map[string]any{
+			"App":   app,
+			"Envs":  envs,
+			"Error": "Environment name is required",
+		})
 	}
-	_, _ = s.Store.CreateEnv(c.Request().Context(), appID, name)
+	if _, err := s.Store.CreateEnv(c.Request().Context(), appID, name); err != nil {
+		app, _ := s.Store.GetApp(c.Request().Context(), appID)
+		envs, _ := s.Store.ListEnvs(c.Request().Context(), appID)
+		msg := err.Error()
+		return c.Render(200, "app_envs.html", map[string]any{
+			"App":   app,
+			"Envs":  envs,
+			"Error": msg,
+		})
+	}
 	return c.Redirect(302, "/apps/"+c.Param("id"))
 }
 
