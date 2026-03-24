@@ -1,4 +1,5 @@
 {{define "app_envs.html"}} {{template "layout.head" .}}
+
 <div class="flex items-center justify-between gap-4">
   <div>
     <div class="text-sm text-slate-500">
@@ -20,6 +21,13 @@
   <div
     class="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50 p-4"
   >
+    {{if .Error}}
+    <div
+      class="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+    >
+      {{.Error}}
+    </div>
+    {{end}}
     <form
       method="post"
       action="/apps/{{.App.ID}}/envs"
@@ -28,6 +36,7 @@
       <input
         name="name"
         placeholder="New environment (e.g. dev, staging, prod)"
+        required
         class="min-w-[240px] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-200"
       />
       <button
@@ -40,6 +49,7 @@
   </div>
 
   <div class="overflow-x-auto">
+    {{if .Envs}}
     <table class="min-w-full">
       <thead>
         <tr
@@ -80,6 +90,12 @@
         {{end}}
       </tbody>
     </table>
+    {{else}}
+    <div class="p-6 text-sm text-slate-600">
+      No environments yet. Create one above (e.g. dev, staging, prod).
+    </div>
+    {{end}}
   </div>
 </div>
+
 {{template "layout.foot" .}} {{end}}

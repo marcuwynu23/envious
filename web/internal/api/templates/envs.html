@@ -1,23 +1,18 @@
-{{define "envs.html"}} {{template "layout.head" .}}
+{{define "envs.html"}}
+{{template "layout.head" .}}
 <div class="flex items-end justify-between gap-4">
   <div>
     <h1 class="text-lg font-semibold">Environments</h1>
-    <p class="mt-1 text-sm text-slate-600">
-      All environments across applications.
-    </p>
+    <p class="mt-1 text-sm text-slate-600">All environments across applications.</p>
   </div>
-  <a href="/" class="text-sm font-semibold text-slate-700 hover:underline"
-    >Applications</a
-  >
+  <a href="/" class="text-sm font-semibold text-slate-700 hover:underline">Applications</a>
 </div>
 
 <div class="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
   <div class="overflow-x-auto">
     <table class="min-w-full">
       <thead>
-        <tr
-          class="text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
-        >
+        <tr class="text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
           <th class="px-4 py-3">Env ID</th>
           <th class="px-4 py-3">App</th>
           <th class="px-4 py-3">Name</th>
@@ -30,25 +25,11 @@
           <td class="px-4 py-3 text-sm text-slate-500">{{.ID}}</td>
           <td class="px-4 py-3 text-sm text-slate-600">App {{.AppID}}</td>
           <td class="px-4 py-3 text-sm">
-            <a
-              href="/apps/{{.AppID}}/envs/{{.ID}}"
-              class="font-semibold text-slate-900 hover:underline"
-              >{{.Name}}</a
-            >
+            <a href="/apps/{{.AppID}}/envs/{{.ID}}" class="font-semibold text-slate-900 hover:underline">{{.Name}}</a>
           </td>
           <td class="px-4 py-3 text-right">
-            <form
-              method="post"
-              action="/apps/{{.AppID}}/envs/{{.ID}}/delete"
-              class="inline"
-            >
-              <button
-                type="submit"
-                class="rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-50"
-                onclick="return confirm('Delete environment?');"
-              >
-                Delete
-              </button>
+            <form method="post" action="/apps/{{.AppID}}/envs/{{.ID}}/delete" class="inline">
+              <button type="submit" class="rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-50" onclick="return confirm('Delete environment?');">Delete</button>
             </form>
           </td>
         </tr>
@@ -57,4 +38,5 @@
     </table>
   </div>
 </div>
-{{template "layout.foot" .}} {{end}}
+{{template "layout.foot" .}}
+{{end}}
