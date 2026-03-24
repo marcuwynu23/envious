@@ -1,38 +1,49 @@
 {{define "envs.html"}} {{template "layout.head" .}}
-<div class="flex items-end justify-between gap-4">
+
+<!-- PAGE HEADER -->
+<div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
   <div>
-    <h1 class="text-lg font-semibold">Environments</h1>
-    <p class="mt-1 text-sm text-slate-600">
+    <h1 class="text-xl font-semibold tracking-tight text-slate-900">
+      Environments
+    </h1>
+    <p class="mt-1 text-sm text-slate-500">
       All environments across applications.
     </p>
   </div>
-  <a href="/" class="text-sm font-semibold text-slate-700 hover:underline"
-    >Applications</a
+
+  <a
+    href="/"
+    class="text-sm font-medium text-slate-700 hover:text-slate-900 transition"
   >
+    Applications
+  </a>
 </div>
 
-<div class="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+<!-- ENVIRONMENTS CARD -->
+<div
+  class="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
+>
+  <!-- TABLE -->
   <div class="overflow-x-auto">
-    <table class="min-w-full">
-      <thead>
-        <tr
-          class="text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
-        >
-          <th class="px-4 py-3">Env ID</th>
-          <th class="px-4 py-3">App</th>
-          <th class="px-4 py-3">Name</th>
+    <table class="w-full text-sm">
+      <thead
+        class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide font-medium"
+      >
+        <tr>
+          <th class="px-4 py-3 text-left">Env ID</th>
+          <th class="px-4 py-3 text-left">App</th>
+          <th class="px-4 py-3 text-left">Name</th>
           <th class="px-4 py-3 text-right">Actions</th>
         </tr>
       </thead>
+
       <tbody class="divide-y divide-slate-100">
         {{range .Envs}}
-        <tr class="hover:bg-slate-50">
-          <td class="px-4 py-3 text-sm text-slate-500">{{.ID}}</td>
-          <td class="px-4 py-3 text-sm text-slate-600">{{.Name}}</td>
-          <td class="px-4 py-3 text-sm">
-            <a
-              href="/apps/{{.AppID}}/envs/{{.ID}}"
-              class="font-semibold text-slate-900 hover:underline"
+        <tr class="hover:bg-slate-50 transition">
+          <td class="px-4 py-3 text-slate-500">{{.ID}}</td>
+          <td class="px-4 py-3 text-slate-600 font-medium">{{.AppName}}</td>
+          <td class="px-4 py-3 font-semibold text-slate-900">
+            <a href="/apps/{{.AppID}}/envs/{{.ID}}" class="hover:underline"
               >{{.Name}}</a
             >
           </td>
@@ -44,7 +55,7 @@
             >
               <button
                 type="submit"
-                class="rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-50"
+                class="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition"
                 onclick="return confirm('Delete environment?');"
               >
                 Delete
@@ -57,4 +68,5 @@
     </table>
   </div>
 </div>
+
 {{template "layout.foot" .}} {{end}}

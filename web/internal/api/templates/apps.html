@@ -1,15 +1,22 @@
-{{define "apps.html"}}
-{{template "layout.head" .}}
-<div class="flex items-end justify-between gap-4">
+{{define "apps.html"}} {{template "layout.head" .}}
+
+<!-- PAGE HEADER -->
+<div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
   <div>
-    <h1 class="text-lg font-semibold">Applications</h1>
-    <p class="mt-1 text-sm text-slate-600">
+    <h1 class="text-xl font-semibold tracking-tight text-slate-900">
+      Applications
+    </h1>
+    <p class="mt-1 text-sm text-slate-500">
       Select an application to manage its environments and variables.
     </p>
   </div>
 </div>
 
-<div class="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+<!-- APPLICATIONS CARD -->
+<div
+  class="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
+>
+  <!-- CREATE FORM -->
   <div
     class="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50 p-4"
   >
@@ -21,45 +28,43 @@
       <input
         name="name"
         placeholder="New application name (e.g. billing-service)"
-        class="min-w-[240px] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-200"
+        class="min-w-[240px] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200"
       />
       <button
         type="submit"
-        class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+        class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition"
       >
         Create
       </button>
     </form>
   </div>
 
+  <!-- APPLICATIONS TABLE -->
   <div class="overflow-x-auto">
-    <table class="min-w-full">
-      <thead>
-        <tr
-          class="text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
-        >
-          <th class="px-4 py-3">ID</th>
-          <th class="px-4 py-3">Name</th>
+    <table class="w-full text-sm">
+      <thead
+        class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide font-medium"
+      >
+        <tr>
+          <th class="px-4 py-3 text-left">ID</th>
+          <th class="px-4 py-3 text-left">Name</th>
           <th class="px-4 py-3 text-right">Actions</th>
         </tr>
       </thead>
+
       <tbody class="divide-y divide-slate-100">
         {{range .Apps}}
-        <tr class="hover:bg-slate-50">
-          <td class="px-4 py-3 text-sm text-slate-500">{{.ID}}</td>
-          <td class="px-4 py-3 text-sm">
-            <a
-              href="/apps/{{.ID}}"
-              class="font-semibold text-slate-900 hover:underline"
-              >{{.Name}}</a
-            >
+        <tr class="hover:bg-slate-50 transition">
+          <td class="px-4 py-3 text-slate-500">{{.ID}}</td>
+          <td class="px-4 py-3 font-semibold text-slate-900">
+            <a href="/apps/{{.ID}}" class="hover:underline">{{.Name}}</a>
           </td>
           <td class="px-4 py-3 text-right">
             {{if ne .ID 1}}
             <form method="post" action="/apps/{{.ID}}/delete" class="inline">
               <button
                 type="submit"
-                class="rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-50"
+                class="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition"
                 onclick="return confirm('Delete application?');"
               >
                 Delete
@@ -73,5 +78,5 @@
     </table>
   </div>
 </div>
-{{template "layout.foot" .}}
-{{end}}
+
+{{template "layout.foot" .}} {{end}}

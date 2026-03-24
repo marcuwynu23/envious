@@ -1,33 +1,42 @@
 {{define "app_envs.html"}} {{template "layout.head" .}}
 
-<div class="flex items-center justify-between gap-4">
+<!-- HEADER -->
+<div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
   <div>
     <div class="text-sm text-slate-500">
-      <a class="hover:underline" href="/">Applications</a>
-      <span class="mx-1">/</span>
-      {{.App.Name}}
+      <a class="hover:text-slate-900 transition" href="/">Applications</a>
+      <span class="mx-1 text-slate-400">/</span>
+      <span class="text-slate-700">{{.App.Name}}</span>
     </div>
-    <h1 class="mt-1 text-lg font-semibold">Environments</h1>
-    <p class="mt-1 text-sm text-slate-600">
+    <h1 class="mt-2 text-xl font-semibold tracking-tight text-slate-900">
+      Environments
+    </h1>
+    <p class="mt-1 text-sm text-slate-500">
       Create and manage environments for this application.
     </p>
   </div>
-  <div class="hidden sm:block text-sm text-slate-500">
+
+  <div class="hidden sm:block text-xs text-slate-400">
     App ID: <span class="font-mono">{{.App.ID}}</span>
   </div>
 </div>
 
-<div class="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+<!-- ENVIRONMENTS CARD -->
+<div
+  class="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
+>
+  <!-- CREATE FORM -->
   <div
     class="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50 p-4"
   >
     {{if .Error}}
     <div
-      class="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+      class="w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
     >
       {{.Error}}
     </div>
     {{end}}
+
     <form
       method="post"
       action="/apps/{{.App.ID}}/envs"
@@ -37,37 +46,37 @@
         name="name"
         placeholder="New environment (e.g. dev, staging, prod)"
         required
-        class="min-w-[240px] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-200"
+        class="min-w-[240px] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200"
       />
       <button
         type="submit"
-        class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+        class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition"
       >
         Create
       </button>
     </form>
   </div>
 
+  <!-- ENVIRONMENTS TABLE -->
   <div class="overflow-x-auto">
     {{if .Envs}}
-    <table class="min-w-full">
-      <thead>
-        <tr
-          class="text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
-        >
-          <th class="px-4 py-3">ID</th>
-          <th class="px-4 py-3">Name</th>
+    <table class="w-full text-sm">
+      <thead
+        class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide font-medium"
+      >
+        <tr>
+          <th class="px-4 py-3 text-left">ID</th>
+          <th class="px-4 py-3 text-left">Name</th>
           <th class="px-4 py-3 text-right">Actions</th>
         </tr>
       </thead>
+
       <tbody class="divide-y divide-slate-100">
         {{range .Envs}}
-        <tr class="hover:bg-slate-50">
-          <td class="px-4 py-3 text-sm text-slate-500">{{.ID}}</td>
-          <td class="px-4 py-3 text-sm">
-            <a
-              href="/apps/{{$.App.ID}}/envs/{{.ID}}"
-              class="font-semibold text-slate-900 hover:underline"
+        <tr class="hover:bg-slate-50 transition">
+          <td class="px-4 py-3 text-slate-500">{{.ID}}</td>
+          <td class="px-4 py-3 font-semibold text-slate-900">
+            <a href="/apps/{{$.App.ID}}/envs/{{.ID}}" class="hover:underline"
               >{{.Name}}</a
             >
           </td>
@@ -79,7 +88,7 @@
             >
               <button
                 type="submit"
-                class="rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-50"
+                class="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition"
                 onclick="return confirm('Delete environment?');"
               >
                 Delete
@@ -91,7 +100,7 @@
       </tbody>
     </table>
     {{else}}
-    <div class="p-6 text-sm text-slate-600">
+    <div class="p-6 text-sm text-slate-500">
       No environments yet. Create one above (e.g. dev, staging, prod).
     </div>
     {{end}}

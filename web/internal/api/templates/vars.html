@@ -1,85 +1,151 @@
 {{define "vars.html"}} {{template "layout.head" .}}
-<div class="flex items-center justify-between gap-4">
+
+<!-- HEADER -->
+<div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
   <div>
     <div class="text-sm text-slate-500">
-      <a class="hover:underline" href="/">Applications</a>
-      <span class="mx-1">/</span>
-      <a class="hover:underline" href="/apps/{{.Env.AppID}}">{{.App.Name}}</a>
-      <span class="mx-1">/</span>
-      {{.Env.Name}}
+      <a class="hover:text-slate-900 transition" href="/">Applications</a>
+      <span class="mx-1 text-slate-400">/</span>
+      <a class="hover:text-slate-900 transition" href="/apps/{{.Env.AppID}}"
+        >{{.App.Name}}</a
+      >
+      <span class="mx-1 text-slate-400">/</span>
+      <span class="text-slate-700">{{.Env.Name}}</span>
     </div>
-    <h1 class="mt-1 text-lg font-semibold">Variables</h1>
-    <p class="mt-1 text-sm text-slate-600">
-      Manage key/value pairs for this environment.
+
+    <h1 class="mt-2 text-xl font-semibold tracking-tight text-slate-900">
+      Variables
+    </h1>
+    <p class="mt-1 text-sm text-slate-500">
+      Manage environment secrets and configuration.
     </p>
   </div>
-  <div class="hidden sm:block text-sm text-slate-500">
+
+  <div class="hidden sm:block text-xs text-slate-400">
     Env ID: <span class="font-mono">{{.Env.ID}}</span>
   </div>
 </div>
 
-<div class="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+<!-- CARD -->
+<div
+  class="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
+>
+  <!-- FORM -->
   <div class="border-b border-slate-200 bg-slate-50 p-4">
     <form
       method="post"
       action="/apps/{{.Env.AppID}}/envs/{{.Env.ID}}/vars"
       class="grid gap-3 sm:grid-cols-3 sm:items-end"
     >
-      <label class="block">
-        <div class="text-xs font-medium text-slate-700">Key</div>
+      <label>
+        <div class="text-xs font-medium text-slate-600">Key</div>
         <input
           name="key"
-          placeholder="KEY"
-          class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-200"
+          placeholder="API_KEY"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-200 outline-none"
         />
       </label>
-      <label class="block sm:col-span-2">
-        <div class="text-xs font-medium text-slate-700">Value</div>
+
+      <label class="sm:col-span-2">
+        <div class="text-xs font-medium text-slate-600">Value</div>
         <input
           name="value"
-          placeholder="value"
-          class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-200"
+          placeholder="••••••••"
+          type="password"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-200 outline-none"
         />
       </label>
+
       <div class="sm:col-span-3 flex justify-end">
         <button
           type="submit"
-          class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+          class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition"
         >
-          Save
+          Save Variable
         </button>
       </div>
     </form>
   </div>
 
+  <!-- TABLE -->
   <div class="overflow-x-auto">
-    <table class="min-w-full">
-      <thead>
-        <tr
-          class="text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
-        >
-          <th class="px-4 py-3">Key</th>
-          <th class="px-4 py-3">Value</th>
-          <th class="px-4 py-3">Version</th>
+    <table class="w-full text-sm">
+      <thead
+        class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide font-medium"
+      >
+        <tr>
+          <th class="px-4 py-3 text-left">Key</th>
+          <th class="px-4 py-3 text-left">Value</th>
+          <th class="px-4 py-3 text-left">Version</th>
           <th class="px-4 py-3 text-right">Actions</th>
         </tr>
       </thead>
+
       <tbody class="divide-y divide-slate-100">
         {{range .Vars}}
-        <tr class="hover:bg-slate-50">
-          <td class="px-4 py-3 text-sm">
-            <span
-              class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-xs"
+        <tr class="hover:bg-slate-50 transition">
+          <!-- KEY -->
+          <td class="px-4 py-3">
+            <span class="font-mono text-xs bg-slate-100 px-2 py-1 rounded"
               >{{.Key}}</span
             >
           </td>
-          <td class="px-4 py-3 text-sm">
-            <span
-              class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-xs"
-              >{{.Value}}</span
-            >
+
+          <!-- VALUE -->
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span
+                class="font-mono text-xs bg-slate-100 px-2 py-1 rounded secret"
+                data-value="{{.Value}}"
+              >
+                ••••••••
+              </span>
+
+              <button
+                type="button"
+                class="text-slate-400 hover:text-slate-700 transition toggle-secret"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="w-4 h-4 eye-open"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M2.25 12s3.75-7.5 9.75-7.5 9.75 7.5 9.75 7.5-3.75 7.5-9.75 7.5S2.25 12 2.25 12z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="w-4 h-4 eye-closed hidden"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M3 3l18 18M12 12c0 3.75 3.75 7.5 7.5 7.5S21.75 12 12 12 3 8.25 3 12z"
+                  />
+                </svg>
+              </button>
+            </div>
           </td>
-          <td class="px-4 py-3 text-sm text-slate-600">v{{.Version}}</td>
+
+          <!-- VERSION -->
+          <td class="px-4 py-3 text-slate-500">v{{.Version}}</td>
+
+          <!-- ACTION -->
           <td class="px-4 py-3 text-right">
             <form
               method="post"
@@ -88,7 +154,7 @@
             >
               <button
                 type="submit"
-                class="rounded-xl border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-50"
+                class="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition"
                 onclick="return confirm('Delete variable?');"
               >
                 Delete
@@ -101,4 +167,26 @@
     </table>
   </div>
 </div>
+
+<!-- SCRIPT -->
+<script>
+  document.querySelectorAll(".toggle-secret").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const span = btn.parentElement.querySelector(".secret");
+      const eyeOpen = btn.querySelector(".eye-open");
+      const eyeClosed = btn.querySelector(".eye-closed");
+
+      if (span.textContent === "••••••••") {
+        span.textContent = span.dataset.value;
+        eyeOpen.classList.add("hidden");
+        eyeClosed.classList.remove("hidden");
+      } else {
+        span.textContent = "••••••••";
+        eyeOpen.classList.remove("hidden");
+        eyeClosed.classList.add("hidden");
+      }
+    });
+  });
+</script>
+
 {{template "layout.foot" .}} {{end}}

@@ -1,21 +1,48 @@
-{{define "login.html"}}
-{{template "layout.login.head" .}}
-<div class="w-full max-w-md">
-  <div class="rounded-2xl border border-white/10 bg-white shadow-2xl">
-    <div class="p-6">
-      <div class="flex items-center gap-3">
-        <div class="h-10 w-10 rounded-2xl bg-gradient-to-br from-sky-400 to-emerald-400"></div>
-        <div>
-          <div class="font-semibold leading-tight">Envious</div>
-          <div class="text-xs text-slate-500 leading-tight">Admin dashboard</div>
-        </div>
-      </div>
-      <p class="mt-4 text-sm text-slate-600">Login with your admin API key to manage applications, environments, and variables.</p>
+{{define "login.html"}} {{template "layout.login.head" .}}
+
+<div class="flex min-h-screen w-full">
+  <!-- LEFT SIDE: info / branding (3/4) -->
+  <div
+    class="hidden lg:flex w-3/4 items-center justify-center p-12 relative overflow-hidden"
+  >
+    <!-- Animated gradient background -->
+    <div
+      class="absolute inset-0 bg-gradient-to-br from-sky-500 via-emerald-400 to-purple-500 animate-gradient-slow"
+    ></div>
+
+    <div class="relative z-10 text-white max-w-xl text-left">
+      <h1 class="text-5xl font-bold">Envious</h1>
+      <p class="mt-4 text-lg">
+        Securely manage your applications, environments, and variables.
+      </p>
+      <p class="mt-2 text-sm opacity-90">
+        Envious is a secrets manager designed for simplicity and security.
+      </p>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDE: login form (1/4) -->
+  <div
+    class="flex w-full lg:w-1/4 items-center justify-center p-12 bg-slate-100"
+  >
+    <div class="w-full">
+      <h1 class="text-3xl font-bold text-slate-900 text-center">Envious</h1>
+      <p class="mt-1 text-sm text-slate-500 text-center">Admin dashboard</p>
+
+      <p class="mt-4 text-sm text-slate-600 text-center">
+        Login with your admin API key to manage applications, environments, and
+        variables.
+      </p>
 
       {{if .Error}}
-        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{.Error}}</div>
+      <div
+        class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 text-center"
+      >
+        {{.Error}}
+      </div>
       {{end}}
 
+      <!-- LOGIN FORM -->
       <form method="post" action="/login" class="mt-5 space-y-3">
         <label class="block">
           <div class="text-xs font-medium text-slate-700">API Key</div>
@@ -24,15 +51,37 @@
             name="api_key"
             placeholder="Paste API key"
             autocomplete="current-password"
-            class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-200"
+            class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
           />
         </label>
-        <button type="submit" class="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">Continue</button>
-      </form>
 
-      <div class="mt-4 text-xs text-slate-500">API requests require <span class="font-mono">X-API-Key</span> and use <span class="font-mono">/api</span>.</div>
+        <button
+          type="submit"
+          class="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition"
+        >
+          Continue
+        </button>
+      </form>
     </div>
   </div>
 </div>
-{{template "layout.login.foot" .}}
-{{end}}
+
+<!-- ANIMATED GRADIENT -->
+<style>
+  @keyframes gradient-slow {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-gradient-slow {
+    background-size: 200% 200%;
+    animation: gradient-slow 15s ease infinite;
+  }
+</style>
+
+{{template "layout.login.foot" .}} {{end}}
