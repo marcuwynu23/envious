@@ -4,13 +4,13 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-# Main entrypoint
-cmd = "go build -o ./tmp/app.exe ./app"
-bin = "tmp/app.exe"
-full_bin = "./tmp/app.exe"
+# Build the server binary
+cmd = "go build -o tmp\\envious-server.exe ./cmd/server"
+bin = "tmp\\envious-server.exe"
+full_bin = "tmp\\envious-server.exe"
 
 # Watch for changes in these directories
-include_dir = ["app", "views"]
+include_dir = ["cmd", "internal", "internal/api/templates"]
 
 # Ignore generated / dependency dirs
 exclude_dir = ["tmp", "build", "dist", "tests", "vendor", ".git"]
