@@ -42,6 +42,7 @@ func New(store *storage.Storage, secret []byte) *Server {
 func (s *Server) registerRoutes() {
 	e := s.E
 	e.POST("/login", s.handleLogin)
+	e.POST("/logout", s.handleLogout)
 
 	// Admin dashboard
 	e.GET("/", s.requireSession(s.handleAdminApps))
@@ -149,6 +150,18 @@ func (s *Server) handleLogin(c echo.Context) error {
 	if c.Request().Header.Get("Content-Type") == "application/json" {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	}
+	return c.Redirect(302, "/")
+}
+
+func (s *Server) handleLogout(c echo.Context) error {
+	c.SetCookie(&http.Cookie{
+		Name:     "envious_auth",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
 	return c.Redirect(302, "/")
 }
 
@@ -448,6 +461,9 @@ func (s *Server) handleAdminCreateEnv(c echo.Context) error {
 		app, _ := s.Store.GetApp(c.Request().Context(), appID)
 		envs, _ := s.Store.ListEnvs(c.Request().Context(), appID)
 		msg := err.Error()
+		if err == storage.ErrDuplicateKey {
+			msg = "Environment already exists in this application"
+		}
 		return c.Render(200, "app_envs.html", map[string]any{
 			"App":   app,
 			"Envs":  envs,

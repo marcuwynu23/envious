@@ -139,6 +139,12 @@ func (s *Storage) migrateEnvironmentsToApps() error {
 		return err
 	}
 
+	if sqlText, err := s.tableSQL("environments"); err == nil && sqlText != "" {
+		if contains(sqlText, "UNIQUE(app_id, name)") && contains(sqlText, "FOREIGN KEY(app_id)") {
+			return nil
+		}
+	}
+
 	if _, err := s.db.Exec("PRAGMA foreign_keys = OFF"); err != nil {
 		return err
 	}
@@ -188,6 +194,21 @@ func (s *Storage) migrateEnvironmentsToApps() error {
 	}
 	_, err = s.db.Exec("PRAGMA foreign_keys = ON")
 	return err
+}
+
+func (s *Storage) tableSQL(name string) (string, error) {
+	var sqlText sql.NullString
+	err := s.db.QueryRow(`SELECT sql FROM sqlite_master WHERE type='table' AND name=?`, name).Scan(&sqlText)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if !sqlText.Valid {
+		return "", nil
+	}
+	return sqlText.String, nil
 }
 
 func (s *Storage) tableExists(name string) (bool, error) {
@@ -559,7 +580,7 @@ func normalizeKey(k []byte) []byte {
 
 func isUniqueConstraint(err error) bool {
 	// modernc.org/sqlite uses "constraint failed" text for unique violations
-	return err != nil && (contains(err.Error(), "UNIQUE constraint failed") || contains(err.Error(), "constraint failed"))
+	return err != nil && contains(err.Error(), "UNIQUE constraint failed")
 }
 
 func contains(s, sub string) bool {
