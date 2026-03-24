@@ -1,4 +1,4 @@
-﻿<div align="center">
+﻿﻿<div align="center">
   <h1>Envious</h1>
   <p>Multi-application environment variable manager (Go + SQLite)</p>
   <p>
