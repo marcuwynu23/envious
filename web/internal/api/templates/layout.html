@@ -6,31 +6,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{with .Title}}{{.}}{{else}}Envious{{end}}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
-  <body class="bg-slate-50 text-slate-900">
-    <header class="border-b border-slate-200 bg-white">
-      <div
-        class="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between gap-4"
-      >
-        <a href="/" class="flex items-center gap-3 no-underline">
-          <div
-            class="h-9 w-9 rounded-xl bg-gradient-to-br from-sky-400 to-emerald-400"
-          ></div>
-          <div>
-            <div class="font-semibold leading-tight">Envious</div>
-            <div class="text-xs text-slate-500 leading-tight">
-              Applications • Environments • Variables
-            </div>
-          </div>
-        </a>
-        <div class="flex items-center gap-3">
-          <div class="text-xs text-slate-500">
-            API: <span class="font-mono">/api</span>
-          </div>
+  <body
+    class="font-[Inter] bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col"
+  >
+    <header class="bg-white border-b border-slate-200">
+      <div class="w-full px-6 h-16 flex items-center justify-between">
+        <!-- LEFT -->
+        <div class="flex flex-col leading-tight">
+          <a
+            href="/"
+            class="text-xl font-bold tracking-tight text-slate-900 hover:opacity-80"
+          >
+            Envious
+          </a>
+          <span class="text-xs text-slate-500">
+            Secrets • Environments • Config
+          </span>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="flex items-center gap-5">
           <form method="post" action="/logout">
             <button
               type="submit"
-              class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              class="text-sm font-medium text-slate-600 hover:text-slate-900 transition"
             >
               Logout
             </button>
@@ -38,11 +44,11 @@
         </div>
       </div>
     </header>
-    <main class="mx-auto max-w-5xl px-6 py-8">
+    <main class="flex-1 w-full px-6 py-6">
       {{end}} {{define "layout.foot"}}
     </main>
-    <footer class="mx-auto max-w-5xl px-6 pb-10 text-xs text-slate-500">
-      <div class="border-t border-slate-200 pt-6">
+    <footer class="w-full px-6 pb-6 text-xs text-slate-500">
+      <div class="border-t border-slate-200 pt-4">
         Envious • SQLite-backed secrets manager
       </div>
     </footer>
@@ -56,8 +62,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{with .Title}}{{.}}{{else}}Envious{{end}}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
-  <body class="bg-slate-950 text-slate-50">
+  <body
+    class="font-[Inter] bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col"
+  >
     <main class="min-h-screen flex items-center justify-center p-6">
       {{end}} {{define "layout.login.foot"}}
     </main>

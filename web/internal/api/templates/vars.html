@@ -1,13 +1,10 @@
-{{define "vars.html"}}
-{{template "layout.head" .}}
+{{define "vars.html"}} {{template "layout.head" .}}
 <div class="flex items-center justify-between gap-4">
   <div>
     <div class="text-sm text-slate-500">
       <a class="hover:underline" href="/">Applications</a>
       <span class="mx-1">/</span>
-      <a class="hover:underline" href="/apps/{{.Env.AppID}}"
-        >App {{.Env.AppID}}</a
-      >
+      <a class="hover:underline" href="/apps/{{.Env.AppID}}">{{.App.Name}}</a>
       <span class="mx-1">/</span>
       {{.Env.Name}}
     </div>
@@ -104,5 +101,4 @@
     </table>
   </div>
 </div>
-{{template "layout.foot" .}}
-{{end}}
+{{template "layout.foot" .}} {{end}}
