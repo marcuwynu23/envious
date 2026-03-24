@@ -1,4 +1,4 @@
-﻿# Envious CLI (envious-cli)
+﻿﻿﻿﻿# Envious CLI (envious-cli)
 
 This folder contains the Envious CLI. It talks to the Envious web server API and manages:
 
