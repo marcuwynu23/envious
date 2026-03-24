@@ -435,9 +435,11 @@ func (s *Server) handleAdminEnv(c echo.Context) error {
 		return c.Render(404, "error.html", map[string]any{"Error": "not found"})
 	}
 	vars, _ := s.Store.ListVars(c.Request().Context(), envID)
+	app, _ := s.Store.GetApp(c.Request().Context(), en.AppID)
 	return c.Render(200, "vars.html", map[string]any{
 		"Env":  en,
 		"Vars": vars,
+		"App":  app,
 	})
 }
 
