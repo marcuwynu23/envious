@@ -11,7 +11,8 @@ endif
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "unknown")
-LDFLAGS = -ldflags "-X envious-cli/cmd.Version=$(VERSION) -X envious-cli/cmd.Commit=$(COMMIT) -X envious-cli/cmd.BuildDate=$(BUILD_DATE)"
+AUTHOR ?= $(shell git config user.name 2>/dev/null || echo "unknown")
+LDFLAGS = -ldflags "-X envious-cli/cmd.Version=$(VERSION) -X envious-cli/cmd.Commit=$(COMMIT) -X envious-cli/cmd.BuildDate=$(BUILD_DATE) -X envious-cli/cmd.Author=$(AUTHOR)"
 
 # Build the CLI (development: version=dev)
 build:
