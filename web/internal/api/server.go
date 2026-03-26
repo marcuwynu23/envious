@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bufio"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -8,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"io"
 	"net/http"
 	"strings"
@@ -40,6 +42,14 @@ func New(store *storage.Storage, secret []byte) *Server {
 
 func (s *Server) registerRoutes() {
 	e := s.E
+
+	// Static assets (embedded)
+	if sub, err := fs.Sub(staticFS, "static"); err == nil {
+		e.StaticFS("/static", sub)
+	} else {
+		panic(err)
+	}
+
 	e.POST("/login", s.handleLogin)
 	e.POST("/logout", s.handleLogout)
 
@@ -54,6 +64,7 @@ func (s *Server) registerRoutes() {
 	e.POST("/apps/:appID/envs/:envID/vars", s.requireSession(s.handleAdminCreateVar))
 	e.POST("/apps/:appID/envs/:envID/vars/:key/delete", s.requireSession(s.handleAdminDeleteVar))
 	e.POST("/apps/:appID/envs/:envID/vars/:key/update", s.requireSession(s.handleAdminUpdateVar))
+	e.POST("/apps/:appID/envs/:envID/vars/import", s.requireSession(s.handleAdminImportVars))
 
 	// API (header X-API-Key required)
 	api := e.Group("/api")
@@ -433,12 +444,54 @@ func (s *Server) handleAdminEnv(c echo.Context) error {
 	if err != nil {
 		return c.Render(404, "error.html", map[string]any{"Error": "not found"})
 	}
-	vars, _ := s.Store.ListVars(c.Request().Context(), envID)
+	page := int64(1)
+	pageSize := int64(25)
+	if v := c.QueryParam("page"); v != "" {
+		if p, err := parseInt64(v); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if v := c.QueryParam("page_size"); v != "" {
+		if ps, err := parseInt64(v); err == nil && ps > 0 && ps <= 200 {
+			pageSize = ps
+		}
+	}
+
+	total, _ := s.Store.CountVars(c.Request().Context(), envID)
+	totalPages := int64(1)
+	if total > 0 {
+		totalPages = (total + pageSize - 1) / pageSize
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+	if page < 1 {
+		page = 1
+	}
+	offset := int((page - 1) * pageSize)
+	vars, _ := s.Store.ListVarsPage(c.Request().Context(), envID, int(pageSize), offset)
+
+	start := int64(0)
+	end := int64(0)
+	if total > 0 {
+		start = (page-1)*pageSize + 1
+		end = start + int64(len(vars)) - 1
+	}
 	app, _ := s.Store.GetApp(c.Request().Context(), en.AppID)
 	return c.Render(200, "vars.html", map[string]any{
 		"Env":  en,
 		"Vars": vars,
 		"App":  app,
+		"Page":       page,
+		"PageSize":   pageSize,
+		"TotalVars":  total,
+		"TotalPages": totalPages,
+		"HasPrev":    page > 1,
+		"HasNext":    page < totalPages,
+		"PrevPage":   page - 1,
+		"NextPage":   page + 1,
+		"Start":      start,
+		"End":        end,
 	})
 }
 
@@ -516,6 +569,43 @@ func (s *Server) handleAdminUpdateVar(c echo.Context) error {
 	if key != "" {
 		_, _ = s.Store.SetVar(c.Request().Context(), envID, key, val)
 	}
+	return c.Redirect(302, "/apps/"+c.Param("appID")+"/envs/"+c.Param("envID"))
+}
+
+func (s *Server) handleAdminImportVars(c echo.Context) error {
+	envID, err := parseIDParam(c, "envID")
+	if err != nil {
+		return c.Redirect(302, "/")
+	}
+
+	fh, err := c.FormFile("file")
+	if err != nil || fh == nil {
+		return c.Redirect(302, "/apps/"+c.Param("appID")+"/envs/"+c.Param("envID"))
+	}
+	f, err := fh.Open()
+	if err != nil {
+		return c.Redirect(302, "/apps/"+c.Param("appID")+"/envs/"+c.Param("envID"))
+	}
+	defer func() { _ = f.Close() }()
+
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		i := strings.IndexRune(line, '=')
+		if i <= 0 {
+			continue
+		}
+		key := strings.TrimSpace(line[:i])
+		val := line[i+1:]
+		if key == "" {
+			continue
+		}
+		_, _ = s.Store.SetVar(c.Request().Context(), envID, key, val)
+	}
+
 	return c.Redirect(302, "/apps/"+c.Param("appID")+"/envs/"+c.Param("envID"))
 }
 
