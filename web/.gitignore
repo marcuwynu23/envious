@@ -4,3 +4,4 @@
 
 dist/
 *.db
+envious_api_key.txt
