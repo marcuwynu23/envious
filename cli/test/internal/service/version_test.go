@@ -7,7 +7,7 @@ import (
 )
 
 func TestVersionService_GetVersion(t *testing.T) {
-	svc := service.NewVersionService("1.0.0", "abc1234", "2024-01-15")
+	svc := service.NewVersionService("1.0.0", "abc1234", "2024-01-15", "me")
 	info := svc.GetVersion()
 	if info.Version != "1.0.0" {
 		t.Errorf("Version = %q, want 1.0.0", info.Version)
@@ -18,10 +18,13 @@ func TestVersionService_GetVersion(t *testing.T) {
 	if info.BuildDate != "2024-01-15" {
 		t.Errorf("BuildDate = %q, want 2024-01-15", info.BuildDate)
 	}
+	if info.Author != "me" {
+		t.Errorf("Author = %q, want me", info.Author)
+	}
 }
 
 func TestVersionService_GetVersion_ReturnsModel(t *testing.T) {
-	svc := service.NewVersionService("x", "y", "z")
+	svc := service.NewVersionService("x", "y", "z", "unknown")
 	info := svc.GetVersion()
 	_ = model.VersionInfo(info)
 	if info.Version != "x" {
