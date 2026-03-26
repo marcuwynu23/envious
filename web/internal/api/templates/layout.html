@@ -4,41 +4,52 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{with .Title}}{{.}}{{else}}Envious{{end}}</title>
+    <link rel="icon" href="/static/logo/logo.svg" type="image/svg+xml" />
+    <title>{{with .Title}}{{.}}{{else}}Envious - Admin Dashboard{{end}}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
   </head>
   <body
-    class="font-[Inter] text-slate-800 antialiased min-h-screen flex flex-col"
+    class="font-[Inter] bg-[#f1f1f1] text-slate-800 antialiased min-h-screen flex flex-col"
   >
-    <header class="w-full border-b border-slate-200 shadow-sm">
+    <header
+      class="fixed top-0 inset-x-0 z-50 w-full border-b border-slate-300 bg-white text-slate-800 shadow-sm"
+    >
       <div
         class="w-full px-6 h-16 flex items-center justify-between max-w-full mx-auto"
       >
         <!-- LEFT: Brand -->
-        <div class="flex flex-col leading-tight">
-          <a
-            href="/"
-            class="text-2xl font-extrabold tracking-tight text-slate-900 hover:text-slate-700 transition"
-          >
-            Envious
-          </a>
-          <span class="text-xs text-slate-500">
-            Secrets • Environments • Config
-          </span>
+        <div class="flex items-center gap-3">
+          <img src="/static/logo/logo.svg" alt="Envious" class="h-9 w-9" />
+          <div class="flex flex-col leading-tight">
+            <a
+              href="/"
+              class="text-xl font-bold tracking-tight bg-gradient-to-r from-[#c94848] to-[#ab3838] bg-clip-text text-transparent hover:opacity-90 transition"
+            >
+              Envious
+            </a>
+            <span class="text-xs text-slate-600">
+              Secrets • Environments • Config
+            </span>
+          </div>
         </div>
 
         <!-- RIGHT: Actions -->
-        <div class="flex items-center gap-4">
-          <form method="post" action="/logout">
+        <div class="flex items-center gap-3">
+          <form
+            method="post"
+            action="/logout"
+            data-confirm="Log out of Envious?"
+            data-confirm-ok="Logout"
+          >
             <button
               type="submit"
-              class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:shadow-sm transition"
+              class="rounded-md bg-gradient-to-r from-[#c94848] to-[#ab3838] px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:from-[#b33c3c] hover:to-[#8f2e2e] transition active:translate-y-[0.5px]"
             >
               Logout
             </button>
@@ -46,14 +57,121 @@
         </div>
       </div>
     </header>
-    <main class="flex-1 w-full px-6 py-6">
+    <main class="flex-1 w-full px-6 pb-8 pt-24">
       {{end}} {{define "layout.foot"}}
     </main>
-    <footer class="w-full px-6 pb-6 text-xs text-slate-500">
-      <div class="border-t border-slate-200 pt-4">
-        Envious • SQLite-backed secrets manager
+
+    <!-- CONFIRM MODAL (shared) -->
+    <div
+      id="confirm-modal"
+      class="fixed inset-0 z-[90] hidden"
+      aria-hidden="true"
+    >
+      <div class="absolute inset-0 bg-slate-900/30 backdrop-blur-[1px]"></div>
+      <div
+        class="relative mx-auto flex min-h-screen max-w-md items-center justify-center p-4"
+      >
+        <div
+          class="w-full rounded-lg border border-slate-300 bg-white shadow-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-modal-title"
+        >
+          <div class="border-b border-slate-200 px-4 py-3">
+            <div
+              id="confirm-modal-title"
+              class="text-sm font-semibold text-slate-900"
+            >
+              Confirm
+            </div>
+          </div>
+          <div class="px-4 py-3">
+            <p id="confirm-modal-message" class="text-sm text-slate-700"></p>
+          </div>
+          <div
+            class="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3"
+          >
+            <button
+              type="button"
+              class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition"
+              data-confirm-cancel
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="rounded-md bg-gradient-to-r from-[#c94848] to-[#ab3838] px-4 py-2 text-sm font-medium text-white shadow-sm hover:from-[#b33c3c] hover:to-[#8f2e2e] transition"
+              data-confirm-ok
+            >
+              Delete
+            </button>
+          </div>
+        </div>
       </div>
-    </footer>
+    </div>
+
+    <script>
+      (() => {
+        const modal = document.getElementById("confirm-modal");
+        if (!modal) return;
+        const messageEl = document.getElementById("confirm-modal-message");
+        const okBtn = modal.querySelector("[data-confirm-ok]");
+        const cancelBtn = modal.querySelector("[data-confirm-cancel]");
+
+        let onOk = null;
+
+        const open = (message, okText) => {
+          messageEl.textContent = message || "Are you sure?";
+          okBtn.textContent = okText || "Confirm";
+          modal.classList.remove("hidden");
+          modal.setAttribute("aria-hidden", "false");
+          setTimeout(() => okBtn.focus(), 0);
+        };
+        const close = () => {
+          modal.classList.add("hidden");
+          modal.setAttribute("aria-hidden", "true");
+          onOk = null;
+        };
+
+        okBtn.addEventListener("click", () => {
+          const fn = onOk;
+          close();
+          if (typeof fn === "function") fn();
+        });
+        cancelBtn.addEventListener("click", close);
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal.querySelector(".absolute")) close();
+        });
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && !modal.classList.contains("hidden"))
+            close();
+        });
+
+        window.enviousConfirm = (opts) => {
+          const o = typeof opts === "string" ? {message: opts} : opts || {};
+          return new Promise((resolve) => {
+            onOk = () => resolve(true);
+            open(o.message, o.okText);
+            const prev = cancelBtn.onclick;
+            cancelBtn.onclick = () => {
+              cancelBtn.onclick = prev;
+              close();
+              resolve(false);
+            };
+          });
+        };
+
+        document.querySelectorAll("form[data-confirm]").forEach((form) => {
+          form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const msg = form.getAttribute("data-confirm") || "Are you sure?";
+            const okText = form.getAttribute("data-confirm-ok") || "Confirm";
+            const ok = await window.enviousConfirm({message: msg, okText});
+            if (ok) form.submit();
+          });
+        });
+      })();
+    </script>
   </body>
 </html>
 {{end}} {{define "layout.login.head"}}
@@ -62,17 +180,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{with .Title}}{{.}}{{else}}Envious{{end}}</title>
+    <link rel="icon" href="/static/logo/logo.svg" type="image/svg+xml" />
+    <title>{{with .Title}}{{.}}{{else}}Envious - Login{{end}}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
   </head>
   <body
-    class="font-[Inter] bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col"
+    class="font-[Inter] bg-[#eceff1] text-slate-800 antialiased min-h-screen flex flex-col"
   >
     <main class="min-h-screen flex items-center justify-center">
       {{end}} {{define "layout.login.foot"}}

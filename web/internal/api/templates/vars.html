@@ -27,83 +27,80 @@
 </div>
 
 <!-- CARD -->
-<div
-  class="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
->
-  <!-- FORM -->
-  <div class="border-b border-slate-200 bg-slate-50 p-4">
-    <form
-      method="post"
-      action="/apps/{{.Env.AppID}}/envs/{{.Env.ID}}/vars"
-      class="grid gap-3 sm:grid-cols-3 sm:items-end"
+<div class="overflow-hidden">
+  <!-- ACTIONS -->
+  <div class="p-4">
+    <div
+      class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
     >
-      <label>
-        <div class="text-xs font-medium text-slate-600">Key</div>
-        <input
-          name="key"
-          placeholder="API_KEY"
-          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-200 outline-none"
-        />
-      </label>
-
-      <label class="sm:col-span-2">
-        <div class="text-xs font-medium text-slate-600">Value</div>
-        <input
-          name="value"
-          placeholder="••••••••"
-          type="password"
-          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-200 outline-none"
-        />
-      </label>
-
-      <div class="sm:col-span-3 flex justify-end">
+      <div class="flex items-center gap-2">
         <button
-          type="submit"
-          class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition"
+          type="button"
+          class="rounded-md bg-gradient-to-r from-[#c94848] to-[#ab3838] px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:from-[#b33c3c] hover:to-[#8f2e2e] transition"
+          data-open-var-modal="add"
         >
-          Save Variable
+          Add Environment Variable
+        </button>
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition"
+          data-open-import-modal
+        >
+          Import Environment Variables
         </button>
       </div>
-    </form>
+    </div>
   </div>
 
   <!-- TABLE -->
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm">
+  <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+    <table class="w-full table-fixed text-sm">
+      <colgroup>
+        <col class="w-[280px]" />
+        <col class="w-[92px]" />
+        <col />
+        <col class="w-[96px]" />
+      </colgroup>
       <thead
-        class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide font-medium"
+        class="bg-slate-50/80 text-slate-500 text-[11px] uppercase tracking-wide font-semibold"
       >
         <tr>
           <th class="px-4 py-3 text-left">Key</th>
+          <th class="px-2 py-3 text-left">Version</th>
           <th class="px-4 py-3 text-left">Value</th>
-          <th class="px-4 py-3 text-left">Version</th>
-          <th class="px-4 py-3 text-right">Actions</th>
+          <th class="px-2 py-3 text-right">Actions</th>
         </tr>
       </thead>
 
       <tbody class="divide-y divide-slate-100">
         {{range .Vars}}
-        <tr class="hover:bg-slate-50 transition">
+        <tr class="hover:bg-slate-50/60 transition">
           <!-- KEY -->
-          <td class="px-4 py-3">
-            <span class="font-mono text-xs bg-slate-100 px-2 py-1 rounded"
+          <td class="px-3 py-3">
+            <span
+              class="inline-flex max-w-[360px] truncate rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-800"
+              title="{{.Key}}"
               >{{.Key}}</span
             >
           </td>
-
+          <!-- VERSION -->
+          <td class="px-4 py-3 text-slate-500 font-mono text-xs">
+            v{{.Version}}
+          </td>
           <!-- VALUE -->
           <td class="px-4 py-3">
             <div class="flex items-center gap-2">
-              <span
-                class="font-mono text-xs bg-slate-100 px-2 py-1 rounded secret"
+              <input
+                type="text"
+                readonly
+                class="flex-1 min-w-[520px] w-full font-mono text-xs bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-md secret outline-none"
                 data-value="{{.Value}}"
-              >
-                ••••••••
-              </span>
+                value="••••••••••••••••••••••••"
+              />
 
               <button
                 type="button"
-                class="text-slate-400 hover:text-slate-700 transition toggle-secret"
+                class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition toggle-secret"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -116,7 +113,7 @@
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    d="M2.25 12s3.75-7.5 9.75-7.5 9.75 7.5 9.75 7.5-3.75 7.5-9.75 7.5S2.25 12 2.25 12z"
+                    d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.208.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
                   />
                   <path
                     stroke-linecap="round"
@@ -124,6 +121,7 @@
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
+
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -135,36 +133,282 @@
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    d="M3 3l18 18M12 12c0 3.75 3.75 7.5 7.5 7.5S21.75 12 12 12 3 8.25 3 12z"
+                    d="M3.98 8.223A10.477 10.477 0 002.037 11.683a1.012 1.012 0 000 .639C3.423 16.493 7.36 19.5 12 19.5c1.646 0 3.216-.378 4.615-1.05M6.228 6.228A9.956 9.956 0 0112 4.5c4.638 0 8.573 3.007 9.963 7.178.07.208.07.431 0 .639a10.478 10.478 0 01-1.665 2.93M6.228 6.228L3 3m3.228 3.228l3.65 3.65m0 0a3 3 0 004.243 4.243m-4.243-4.243l4.243 4.243m0 0L21 21"
                   />
                 </svg>
               </button>
             </div>
           </td>
 
-          <!-- VERSION -->
-          <td class="px-4 py-3 text-slate-500">v{{.Version}}</td>
-
           <!-- ACTION -->
-          <td class="px-4 py-3 text-right">
-            <form
-              method="post"
-              action="/apps/{{$.Env.AppID}}/envs/{{$.Env.ID}}/vars/{{.Key}}/delete"
-              class="inline"
-            >
+          <td class="px-2 py-3 text-right">
+            <div class="relative inline-flex items-center">
               <button
-                type="submit"
-                class="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition"
-                onclick="return confirm('Delete variable?');"
+                type="button"
+                class="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-800 transition"
+                aria-label="More actions"
+                data-var-menu-button
+                data-var-key="{{.Key}}"
               >
-                Delete
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="h-4 w-4"
+                >
+                  <path
+                    d="M10 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM10 11.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM10 17a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"
+                  />
+                </svg>
               </button>
-            </form>
+
+              <form
+                method="post"
+                action="/apps/{{$.Env.AppID}}/envs/{{$.Env.ID}}/vars/{{.Key}}/delete"
+                class="hidden"
+                data-var-delete-form="{{.Key}}"
+              ></form>
+            </div>
           </td>
         </tr>
         {{end}}
       </tbody>
     </table>
+  </div>
+
+  <div class="mt-3 flex items-center justify-between text-xs text-slate-600">
+    <div class="{{if not (gt .TotalVars 0)}}w-full text-center{{end}}">
+      {{if gt .TotalVars 0}} Showing
+      <span class="font-medium text-slate-800">{{.Start}}</span>–<span
+        class="font-medium text-slate-800"
+        >{{.End}}</span
+      >
+      of <span class="font-medium text-slate-800">{{.TotalVars}}</span>
+      {{else}} No variables {{end}}
+    </div>
+
+    <div class="flex items-center gap-2 {{if not (gt .TotalVars 0)}}hidden{{end}}">
+      {{if .HasPrev}}
+      <a
+        class="rounded-md border border-slate-200 bg-white px-2.5 py-1 shadow-sm hover:bg-slate-50 transition"
+        href="/apps/{{.Env.AppID}}/envs/{{.Env.ID}}?page={{.PrevPage}}&page_size={{.PageSize}}"
+        >Prev</a
+      >
+      {{else}}
+      <span
+        class="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-400"
+        >Prev</span
+      >
+      {{end}}
+
+      <span class="text-slate-500">
+        Page <span class="font-medium text-slate-800">{{.Page}}</span>/<span
+          class="font-medium text-slate-800"
+          >{{.TotalPages}}</span
+        >
+      </span>
+
+      {{if .HasNext}}
+      <a
+        class="rounded-md border border-slate-200 bg-white px-2.5 py-1 shadow-sm hover:bg-slate-50 transition"
+        href="/apps/{{.Env.AppID}}/envs/{{.Env.ID}}?page={{.NextPage}}&page_size={{.PageSize}}"
+        >Next</a
+      >
+      {{else}}
+      <span
+        class="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-400"
+        >Next</span
+      >
+      {{end}}
+    </div>
+  </div>
+</div>
+
+<!-- CONTEXT MENU (shared, fixed positioned to avoid clipping) -->
+<div
+  id="var-context-menu"
+  class="fixed z-[80] hidden min-w-[160px] rounded-md border border-slate-300 bg-white shadow-sm"
+  role="menu"
+  aria-hidden="true"
+>
+  <button
+    type="button"
+    class="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition"
+    data-var-menu-edit
+  >
+    Edit
+  </button>
+  <button
+    type="button"
+    class="w-full px-3 py-2 text-left text-sm text-red-700 hover:bg-slate-50 transition"
+    data-var-menu-delete
+  >
+    Delete
+  </button>
+</div>
+
+<!-- MODAL -->
+<div id="var-modal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-slate-900/30 backdrop-blur-[1px]"></div>
+  <div
+    class="relative mx-auto flex min-h-screen max-w-lg items-center justify-center p-4"
+  >
+    <div
+      class="w-full rounded-lg border border-slate-300 bg-white shadow-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="var-modal-title"
+    >
+      <div
+        class="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-3"
+      >
+        <div class="min-w-0">
+          <div
+            id="var-modal-title"
+            class="text-sm font-semibold text-slate-900"
+          >
+            Variable
+          </div>
+          <div
+            id="var-modal-subtitle"
+            class="mt-0.5 text-xs text-slate-600"
+          ></div>
+        </div>
+        <button
+          type="button"
+          class="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
+          data-close-var-modal
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+
+      <form
+        id="var-modal-form"
+        method="post"
+        action="/apps/{{.Env.AppID}}/envs/{{.Env.ID}}/vars"
+        class="p-4 space-y-3"
+      >
+        <label class="block" id="var-modal-key-wrap">
+          <div class="text-xs font-medium text-slate-600">Key</div>
+          <input
+            id="var-modal-key"
+            name="key"
+            placeholder="API_KEY"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#ab3838] focus:ring-2 focus:ring-[#f3c1c1]"
+            autocomplete="off"
+          />
+        </label>
+
+        <label class="block">
+          <div class="text-xs font-medium text-slate-600">Value</div>
+          <input
+            id="var-modal-value"
+            name="value"
+            placeholder="Enter value"
+            type="password"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#ab3838] focus:ring-2 focus:ring-[#f3c1c1]"
+            required
+            autocomplete="new-password"
+          />
+        </label>
+
+        <div class="flex items-center justify-end gap-2 pt-1">
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+            data-close-var-modal
+          >
+            Cancel
+          </button>
+          <button
+            id="var-modal-submit"
+            type="submit"
+            class="rounded-md bg-gradient-to-r from-[#c94848] to-[#ab3838] px-4 py-2 text-sm font-medium text-white shadow-sm hover:from-[#b33c3c] hover:to-[#8f2e2e] transition"
+          >
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div id="import-modal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-slate-900/30 backdrop-blur-[1px]"></div>
+  <div
+    class="relative mx-auto flex min-h-screen max-w-lg items-center justify-center p-4"
+  >
+    <div
+      class="w-full rounded-lg border border-slate-300 bg-white shadow-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="import-modal-title"
+    >
+      <div
+        class="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-3"
+      >
+        <div class="min-w-0">
+          <div
+            id="import-modal-title"
+            class="text-sm font-semibold text-slate-900"
+          >
+            Import .env
+          </div>
+          <div class="mt-0.5 text-xs text-slate-600">
+            Upload a file with lines like
+            <span class="font-mono">KEY=VALUE</span>. Blank lines and
+            <span class="font-mono">#</span> comments are ignored.
+          </div>
+        </div>
+        <button
+          type="button"
+          class="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
+          data-close-import-modal
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+
+      <form
+        id="import-modal-form"
+        method="post"
+        action="/apps/{{.Env.AppID}}/envs/{{.Env.ID}}/vars/import"
+        enctype="multipart/form-data"
+        class="p-4 space-y-3"
+      >
+        <label class="block">
+          <div class="text-xs font-medium text-slate-600">File</div>
+          <input
+            id="import-modal-file"
+            type="file"
+            name="file"
+            accept=".env,text/plain"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#ab3838] focus:ring-2 focus:ring-[#f3c1c1]"
+            required
+          />
+        </label>
+
+        <div class="flex items-center justify-end gap-2 pt-1">
+          <button
+            type="button"
+            class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition"
+            data-close-import-modal
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="rounded-md bg-gradient-to-r from-[#c94848] to-[#ab3838] px-4 py-2 text-sm font-medium text-white shadow-sm hover:from-[#b33c3c] hover:to-[#8f2e2e] transition"
+          >
+            Import
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -172,21 +416,193 @@
 <script>
   document.querySelectorAll(".toggle-secret").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const span = btn.parentElement.querySelector(".secret");
+      const input = btn.parentElement.querySelector(".secret");
       const eyeOpen = btn.querySelector(".eye-open");
       const eyeClosed = btn.querySelector(".eye-closed");
 
-      if (span.textContent === "••••••••") {
-        span.textContent = span.dataset.value;
+      if (input.value === "••••••••••••••••••••••••") {
+        input.value = input.dataset.value;
         eyeOpen.classList.add("hidden");
         eyeClosed.classList.remove("hidden");
       } else {
-        span.textContent = "••••••••";
+        input.value = "••••••••••••••••••••••••";
         eyeOpen.classList.remove("hidden");
         eyeClosed.classList.add("hidden");
       }
     });
   });
+
+  const modal = document.getElementById("var-modal");
+  const modalForm = document.getElementById("var-modal-form");
+  const modalTitle = document.getElementById("var-modal-title");
+  const modalSubtitle = document.getElementById("var-modal-subtitle");
+  const keyWrap = document.getElementById("var-modal-key-wrap");
+  const keyInput = document.getElementById("var-modal-key");
+  const valInput = document.getElementById("var-modal-value");
+  const submitBtn = document.getElementById("var-modal-submit");
+
+  const openModal = () => {
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+    setTimeout(() => valInput.focus(), 0);
+  };
+  const closeModal = () => {
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+    modalForm.reset();
+    keyInput.readOnly = false;
+    keyWrap.classList.remove("hidden");
+  };
+
+  const openAdd = () => {
+    modalTitle.textContent = "Add Environment Variable";
+    modalSubtitle.textContent =
+      "Creates a new key or updates an existing key (versioned).";
+    modalForm.action = "/apps/{{.Env.AppID}}/envs/{{.Env.ID}}/vars";
+    submitBtn.textContent = "Save";
+    keyWrap.classList.remove("hidden");
+    keyInput.readOnly = false;
+    keyInput.value = "";
+    valInput.value = "";
+    openModal();
+    setTimeout(() => keyInput.focus(), 0);
+  };
+
+  const openEdit = (key) => {
+    const safeKey = (key ?? "").toString().trim();
+    if (!safeKey) return;
+    modalTitle.textContent = "Edit Environment Variable";
+    modalSubtitle.textContent = `Key: ${safeKey}`;
+    modalForm.action = `/apps/{{.Env.AppID}}/envs/{{.Env.ID}}/vars/${encodeURIComponent(safeKey)}/update`;
+    submitBtn.textContent = "Update";
+    keyWrap.classList.add("hidden");
+    keyInput.value = safeKey;
+    valInput.value = "";
+    openModal();
+  };
+
+  document.querySelectorAll("[data-open-var-modal]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const mode = el.getAttribute("data-open-var-modal");
+      if (mode === "add") return openAdd();
+      if (mode === "edit") return openEdit(el.getAttribute("data-var-key"));
+    });
+  });
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal.querySelector(".absolute")) closeModal();
+  });
+  document.querySelectorAll("[data-close-var-modal]").forEach((el) => {
+    el.addEventListener("click", closeModal);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
+  });
+
+  const importModal = document.getElementById("import-modal");
+  const importForm = document.getElementById("import-modal-form");
+  const importFile = document.getElementById("import-modal-file");
+
+  const openImportModal = () => {
+    importModal.classList.remove("hidden");
+    importModal.setAttribute("aria-hidden", "false");
+    setTimeout(() => importFile.focus(), 0);
+  };
+  const closeImportModal = () => {
+    importModal.classList.add("hidden");
+    importModal.setAttribute("aria-hidden", "true");
+    importForm.reset();
+  };
+
+  document.querySelectorAll("[data-open-import-modal]").forEach((el) => {
+    el.addEventListener("click", openImportModal);
+  });
+  document.querySelectorAll("[data-close-import-modal]").forEach((el) => {
+    el.addEventListener("click", closeImportModal);
+  });
+  importModal.addEventListener("click", (e) => {
+    if (e.target === importModal.querySelector(".absolute")) closeImportModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !importModal.classList.contains("hidden")) {
+      closeImportModal();
+    }
+  });
+
+  // Context menu (per-row "more" button)
+  const ctxMenu = document.getElementById("var-context-menu");
+  const ctxEdit = ctxMenu.querySelector("[data-var-menu-edit]");
+  const ctxDelete = ctxMenu.querySelector("[data-var-menu-delete]");
+  let ctxKey = null;
+
+  const closeCtxMenu = () => {
+    ctxMenu.classList.add("hidden");
+    ctxMenu.setAttribute("aria-hidden", "true");
+    ctxKey = null;
+  };
+
+  const openCtxMenu = (btn, key) => {
+    ctxKey = key;
+    const r = btn.getBoundingClientRect();
+    const menuW = 180; // rough width for clamping
+    const padding = 8;
+    let left = r.right - menuW;
+    left = Math.max(
+      padding,
+      Math.min(left, window.innerWidth - menuW - padding),
+    );
+    let top = r.bottom + 6;
+    top = Math.max(padding, Math.min(top, window.innerHeight - 120));
+
+    ctxMenu.style.left = `${left}px`;
+    ctxMenu.style.top = `${top}px`;
+    ctxMenu.classList.remove("hidden");
+    ctxMenu.setAttribute("aria-hidden", "false");
+  };
+
+  document.querySelectorAll("[data-var-menu-button]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const key = btn.getAttribute("data-var-key");
+      if (!ctxMenu.classList.contains("hidden") && ctxKey === key) {
+        closeCtxMenu();
+      } else {
+        openCtxMenu(btn, key);
+      }
+    });
+  });
+
+  ctxEdit.addEventListener("click", () => {
+    if (!ctxKey) return;
+    const key = ctxKey;
+    closeCtxMenu();
+    openEdit(key);
+  });
+
+  ctxDelete.addEventListener("click", async () => {
+    if (!ctxKey) return;
+    const key = ctxKey;
+    const form = document.querySelector(
+      `[data-var-delete-form="${CSS.escape(key)}"]`,
+    );
+    closeCtxMenu();
+    if (!form) return;
+    const ok = await window.enviousConfirm({
+      message: "Delete variable?",
+      okText: "Delete",
+    });
+    if (ok) form.submit();
+  });
+
+  document.addEventListener("click", () => {
+    if (!ctxMenu.classList.contains("hidden")) closeCtxMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !ctxMenu.classList.contains("hidden"))
+      closeCtxMenu();
+  });
+  window.addEventListener("resize", closeCtxMenu);
+  window.addEventListener("scroll", closeCtxMenu, true);
 </script>
 
 {{template "layout.foot" .}} {{end}}

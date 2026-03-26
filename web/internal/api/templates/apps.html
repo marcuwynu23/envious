@@ -13,69 +13,71 @@
 </div>
 
 <!-- APPLICATIONS CARD -->
-<div
-  class="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
->
+<div class="mt-2 rounded-lg overflow-hidden">
   <!-- CREATE FORM -->
-  <div
-    class="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50 p-4"
-  >
+  <div class="flex flex-wrap items-center justify-end gap-3 p-4">
     <form
       method="post"
       action="/apps"
-      class="flex flex-1 flex-wrap items-center gap-3"
+      class="flex flex-wrap items-center gap-3"
+      data-confirm="Create this application?"
+      data-confirm-ok="Create"
     >
       <input
         name="name"
         placeholder="New application name (e.g. billing-service)"
-        class="min-w-[240px] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200"
+        class="w-[320px] rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#ab3838] focus:ring-2 focus:ring-[#f3c1c1]"
       />
       <button
         type="submit"
-        class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition"
+        class="rounded-md bg-gradient-to-r from-[#c94848] to-[#ab3838] px-4 py-2 text-sm font-medium text-white shadow-sm hover:from-[#b33c3c] hover:to-[#8f2e2e] transition"
       >
         Create
       </button>
     </form>
   </div>
 
-  <!-- APPLICATIONS TABLE -->
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead
-        class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide font-medium"
+  <!-- APPLICATIONS LIST -->
+  <div class="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+    {{range .Apps}}
+    <div
+      class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow"
+    >
+      <div
+        class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
       >
-        <tr>
-          <th class="px-4 py-3 text-left">ID</th>
-          <th class="px-4 py-3 text-left">Name</th>
-          <th class="px-4 py-3 text-right">Actions</th>
-        </tr>
-      </thead>
-
-      <tbody class="divide-y divide-slate-100">
-        {{range .Apps}}
-        <tr class="hover:bg-slate-50 transition">
-          <td class="px-4 py-3 text-slate-500">{{.ID}}</td>
-          <td class="px-4 py-3 font-semibold text-slate-900">
-            <a href="/apps/{{.ID}}" class="hover:underline">{{.Name}}</a>
-          </td>
-          <td class="px-4 py-3 text-right">
-            {{if ne .ID 1}}
-            <form method="post" action="/apps/{{.ID}}/delete" class="inline">
-              <button
-                type="submit"
-                class="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition"
-                onclick="return confirm('Delete application?');"
-              >
-                Delete
-              </button>
-            </form>
-            {{end}}
-          </td>
-        </tr>
-        {{end}}
-      </tbody>
-    </table>
+        <div class="min-w-0">
+          <p class="text-xs uppercase tracking-wide text-slate-500">#{{.ID}}</p>
+          <span class="mt-1 block truncate text-sm font-semibold text-slate-900"
+            >{{.Name}}</span
+          >
+        </div>
+        <div class="sm:shrink-0 flex items-center gap-2">
+          <a
+            href="/apps/{{.ID}}"
+            class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition"
+            >Open</a
+          >
+          {{if ne .ID 1}}
+          <form
+            method="post"
+            action="/apps/{{.ID}}/delete"
+            class="inline"
+            data-confirm="Delete application?"
+            data-confirm-ok="Delete"
+          >
+            <button
+              type="submit"
+              class="rounded-md bg-gradient-to-r from-[#c94848] to-[#ab3838] px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:from-[#b33c3c] hover:to-[#8f2e2e] transition"
+            >
+              Delete
+            </button>
+          </form>
+          {{end}}
+        </div>
+      </div>
+    </div>
+    {{end}}
   </div>
 </div>
 
