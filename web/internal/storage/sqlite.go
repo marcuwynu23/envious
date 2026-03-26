@@ -411,6 +411,50 @@ func (s *Storage) ListVars(ctx context.Context, envID int64) ([]env.Variable, er
 	return out, rows.Err()
 }
 
+func (s *Storage) CountVars(ctx context.Context, envID int64) (int64, error) {
+	var n int64
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM variables WHERE env_id = ?`, envID).Scan(&n)
+	return n, err
+}
+
+func (s *Storage) ListVarsPage(ctx context.Context, envID int64, limit, offset int) ([]env.Variable, error) {
+	if limit <= 0 {
+		limit = 25
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, env_id, key, value_encrypted, version, created_at, updated_at
+		FROM variables
+		WHERE env_id = ?
+		ORDER BY key ASC
+		LIMIT ? OFFSET ?
+	`, envID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []env.Variable
+	for rows.Next() {
+		var v env.Variable
+		var enc string
+		var created, updated string
+		if err := rows.Scan(&v.ID, &v.EnvID, &v.Key, &enc, &v.Version, &created, &updated); err != nil {
+			return nil, err
+		}
+		val, err := s.decrypt(enc)
+		if err != nil {
+			return nil, err
+		}
+		v.Value = val
+		v.CreatedAt, _ = time.Parse(time.RFC3339Nano, created)
+		v.UpdatedAt, _ = time.Parse(time.RFC3339Nano, updated)
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
 func (s *Storage) GetVar(ctx context.Context, envID int64, key string) (*env.Variable, error) {
 	var v env.Variable
 	var enc, created, updated string
