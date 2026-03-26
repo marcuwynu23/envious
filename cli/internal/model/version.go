@@ -5,4 +5,5 @@ type VersionInfo struct {
 	Version   string
 	Commit    string
 	BuildDate string
+	Author    string
 }

@@ -20,4 +20,5 @@ func (r *VersionRenderer) Render(w io.Writer, info model.VersionInfo) {
 	fmt.Fprintf(w, "version %s\n", info.Version)
 	fmt.Fprintf(w, "  commit: %s\n", info.Commit)
 	fmt.Fprintf(w, "  built:  %s\n", info.BuildDate)
+	fmt.Fprintf(w, "  author: %s\n", info.Author)
 }

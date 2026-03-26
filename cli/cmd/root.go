@@ -20,13 +20,23 @@ var (
 	Version   = "dev"
 	Commit    = "none"
 	BuildDate = "unknown"
+	Author    = "unknown"
 )
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "envious",
-	Short: "Envious CLI - environment manager",
-	Long:  `Envious CLI manages environments and variables via the Envious server.`,
+	Short: "Envious CLI",
+	Long: `Manage applications, environments, and variables via the Envious server.
+
+Examples:
+  envious application list
+  envious environment list --app-id 2
+  envious variable list --env-id 1
+  envious variable set --env-id 1 API_KEY secret
+  envious variable import --env-id 1 .env`,
+	SilenceErrors: true,
+	SilenceUsage:  true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Optional: validate global config, load config file, etc.
 		return nil
@@ -49,8 +59,8 @@ func RootCmd() *cobra.Command {
 func init() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true // Disable the default completion command
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.app.yaml)")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "path to config file")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "enable verbose output")
 
 	rootCmd.AddCommand(version.NewCommand(func() (service.VersionProvider, *view.VersionRenderer) {
 		d := deps()

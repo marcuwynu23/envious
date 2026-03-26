@@ -19,7 +19,7 @@ func initDeps() {
 		return
 	}
 	defaultDeps = &Deps{
-		VersionProvider: service.NewVersionService(Version, Commit, BuildDate),
+		VersionProvider: service.NewVersionService(Version, Commit, BuildDate, Author),
 		VersionView:     view.NewVersionRenderer(),
 	}
 }

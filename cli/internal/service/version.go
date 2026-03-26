@@ -12,14 +12,16 @@ type VersionService struct {
 	version   string
 	commit    string
 	buildDate string
+	author    string
 }
 
 // NewVersionService returns a VersionProvider with the given build info.
-func NewVersionService(version, commit, buildDate string) *VersionService {
+func NewVersionService(version, commit, buildDate, author string) *VersionService {
 	return &VersionService{
 		version:   version,
 		commit:    commit,
 		buildDate: buildDate,
+		author:    author,
 	}
 }
 
@@ -29,5 +31,6 @@ func (s *VersionService) GetVersion() model.VersionInfo {
 		Version:   s.version,
 		Commit:    s.commit,
 		BuildDate: s.buildDate,
+		Author:    s.author,
 	}
 }

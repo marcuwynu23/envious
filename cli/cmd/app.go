@@ -5,6 +5,7 @@ import (
 
 	"envious-cli/internal/client"
 	"envious-cli/internal/config"
+	"envious-cli/internal/view"
 	"github.com/spf13/cobra"
 )
 
@@ -14,8 +15,9 @@ func init() {
 
 func newAppCmd() *cobra.Command {
 	appCmd := &cobra.Command{
-		Use:   "app",
-		Short: "Manage applications",
+		Use:     "application",
+		Aliases: []string{"app", "apps"},
+		Short:   "Manage applications",
 	}
 	appCmd.AddCommand(appListCmd(), appCreateCmd(), appDeleteCmd())
 	return appCmd
@@ -25,6 +27,7 @@ func appListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List applications",
+		Example: `  envious app list`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, _ := config.Load()
 			c, err := client.New(cfg.APIBase, cfg.APIKey)
@@ -35,9 +38,14 @@ func appListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			t := view.Table{Headers: []string{"ID", "NAME"}}
 			for _, a := range apps {
-				fmt.Fprintf(cmd.OutOrStdout(), "%v\t%s\n", a["id"], a["name"])
+				t.Rows = append(t.Rows, []string{
+					fmt.Sprint(a["id"]),
+					fmt.Sprint(a["name"]),
+				})
 			}
+			t.Render(cmd.OutOrStdout())
 			return nil
 		},
 	}

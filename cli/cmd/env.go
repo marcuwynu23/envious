@@ -5,6 +5,7 @@ import (
 
 	"envious-cli/internal/client"
 	"envious-cli/internal/config"
+	"envious-cli/internal/view"
 	"github.com/spf13/cobra"
 )
 
@@ -14,8 +15,9 @@ func init() {
 
 func newEnvCmd() *cobra.Command {
 	envCmd := &cobra.Command{
-		Use:   "env",
-		Short: "Manage environments",
+		Use:     "environment",
+		Aliases: []string{"env", "envs", "environments"},
+		Short:   "Manage environments",
 	}
 	envCmd.AddCommand(envListCmd(), envCreateCmd(), envDeleteCmd())
 	return envCmd
@@ -26,6 +28,8 @@ func envListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List environments",
+		Example: `  envious env list
+  envious env list --app-id 2`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, _ := config.Load()
 			c, err := client.New(cfg.APIBase, cfg.APIKey)
@@ -36,9 +40,26 @@ func envListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			for _, e := range envs {
-				fmt.Fprintf(cmd.OutOrStdout(), "%v\tapp=%v\t%s\n", e["id"], e["app_id"], e["name"])
+			apps, err := c.ListApps()
+			if err != nil {
+				return err
 			}
+			appNameByID := map[string]string{}
+			for _, a := range apps {
+				appNameByID[fmt.Sprint(a["id"])] = fmt.Sprint(a["name"])
+			}
+
+			t := view.Table{Headers: []string{"ID", "APP_ID", "APPLICATION", "NAME"}}
+			for _, e := range envs {
+				appIDStr := fmt.Sprint(e["app_id"])
+				t.Rows = append(t.Rows, []string{
+					fmt.Sprint(e["id"]),
+					appIDStr,
+					appNameByID[appIDStr],
+					fmt.Sprint(e["name"]),
+				})
+			}
+			t.Render(cmd.OutOrStdout())
 			return nil
 		},
 	}
