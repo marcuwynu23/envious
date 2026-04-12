@@ -1,4 +1,4 @@
-﻿﻿﻿﻿<div align="center">
+﻿<div align="center">
   <h1>Envious</h1>
   <p>Multi-application environment variable manager (Go + SQLite)</p>
   <p>
@@ -102,3 +102,12 @@ Notes:
 
 - `--app-id=0` means “default application” for create, and “all applications” for list.
 - `var` commands operate on an environment id.
+
+## Project resources
+
+- **[Changelog](CHANGELOG.md)** — notable changes and release history.
+- **[Contributing](CONTRIBUTING.md)** — how to propose changes, run tests, and work on `web/` and `cli/`.
+- **[Code of Conduct](CODE_OF_CONDUCT.md)** — community standards for participants.
+- **GitHub templates** — [Pull request template](.github/pull_request_template.md) and [issue templates](.github/ISSUE_TEMPLATE/) used when you open PRs and issues on GitHub.
+- **Funding** — [PayPal](https://paypal.me/wynumarcu23); the repository sponsor button is configured in [.github/FUNDING.yml](.github/FUNDING.yml).
+- **License** — this project is under the [MIT License](LICENSE).
