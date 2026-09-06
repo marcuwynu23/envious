@@ -6,7 +6,7 @@
 ![Go version](https://img.shields.io/badge/Go-1.21%2B%20%7C%201.23%2B-00ADD8?logo=go&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![Echo](https://img.shields.io/badge/Echo-4B32C3)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-Apache%202.0-blue?logo=apache)
 ![Release CLI](https://github.com/marcuwynu23/envious/actions/workflows/release-cli.yml/badge.svg)
 ![Release web Docker](https://github.com/marcuwynu23/envious/actions/workflows/release-web-docker.yml/badge.svg)
 ![Downloads](https://img.shields.io/github/downloads/marcuwynu23/envious/total)
@@ -105,7 +105,7 @@ Stop scattering `.env` files across every service — run one SQLite-backed serv
 | **Offline capable**     | Yes                              | Yes                    | Yes             | No                              |
 | **Per-user ACLs**       | No (single admin key)            | N/A                    | Yes             | Yes                             |
 | **Secret rotation**     | Manual (`set`)                   | Manual                 | Dynamic engines | Varies                          |
-| **License**             | MIT                              | N/A                    | BUSL            | Proprietary                     |
+| **License**             | Apache 2.0                       | N/A                    | BUSL            | Proprietary                     |
 
 ## Installation
 
@@ -405,6 +405,8 @@ envious/
 
 ## License
 
-[MIT](LICENSE) — Copyright (c) 2026 Mark Wayne Menorca
+[Apache 2.0](LICENSE) — Copyright (c) 2026 Mark Wayne Menorca
+
+A permissive license that grants you the freedom to use, modify, distribute, and sell the software, provided you include the original copyright notice. It also includes an express grant of patent rights from contributors.
 
 Happy Coding! 🚀

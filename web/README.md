@@ -297,4 +297,4 @@ Make sure the service account has read access to the application directory and `
 
 ## License
 
-This template is provided under the **MIT License**. See the `LICENSE` file for the full license text. Adapt it freely to your own projects.
+This template is provided under the **Apache License 2.0**. See the `LICENSE` file for the full license text. Adapt it freely to your own projects.
