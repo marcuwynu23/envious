@@ -1,4 +1,4 @@
-.PHONY: build test clean install run version-build
+.PHONY: build release-build test test-coverage clean install run deps version
 
 BINARY_NAME ?= envious
 DIST_DIR ?= dist
@@ -8,25 +8,29 @@ ifeq ($(GOOS),windows)
 else
   OUTPUT := $(DIST_DIR)/$(BINARY_NAME)
 endif
+# Override on the command line: make build VERSION=v1.0.0
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "unknown")
 AUTHOR ?= $(shell git config user.name 2>/dev/null || echo "unknown")
 LDFLAGS = -ldflags "-X envious-cli/cmd.Version=$(VERSION) -X envious-cli/cmd.Commit=$(COMMIT) -X envious-cli/cmd.BuildDate=$(BUILD_DATE) -X envious-cli/cmd.Author=$(AUTHOR)"
 
-# Build the CLI (development: version=dev)
+# Build the CLI with version info (override with VERSION=v1.0.0)
 build:
 	@echo "create dist directory if it doesn't exist"
 	@mkdir -p $(DIST_DIR)
-	@echo "build the binary"
-	go build -o $(OUTPUT) .
+	@echo "build the binary ($(VERSION))"
+	go build -trimpath $(LDFLAGS) -o $(OUTPUT) .
 
-# Build with version info for release
-release-build:
-	@echo "create dist directory if it doesn't exist"
-	@mkdir -p $(DIST_DIR)
-	@echo "build the binary with version info"
-	go build $(LDFLAGS) -o $(OUTPUT) .
+# Alias kept for compatibility (same as build)
+release-build: build
+
+# Print the resolved version vars without building
+version:
+	@echo "VERSION=$(VERSION)"
+	@echo "COMMIT=$(COMMIT)"
+	@echo "BUILD_DATE=$(BUILD_DATE)"
+	@echo "AUTHOR=$(AUTHOR)"
 
 # Run tests
 test:
@@ -57,6 +61,6 @@ clean:
 	@rm -f coverage.out coverage.html
 
 # Install CLI to $GOPATH/bin (optional)
-install: version-build
+install: release-build
 	@echo "install the binary to $GOPATH/bin"
-	@go install .
+	@go install $(LDFLAGS) .
