@@ -77,13 +77,21 @@ func main() {
 	if len(secret) == 0 {
 		secret = []byte("envious-default-secret-do-not-use-in-prod")
 	}
-	srv := api.New(store, secret)
-	srv.Version = version.Current().Version
+	srv := api.New(store, secret, api.Options{
+		Version:   version.Current().Version,
+		AuthTTL:   time.Duration(cfg.AuthCacheTTLSeconds) * time.Second,
+		RateRPS:   cfg.RateLimitRPS,
+		RateBurst: cfg.RateLimitBurst,
+	})
 
 	addr := ":" + itoa(cfg.Port)
 	httpSrv := &http.Server{
-		Addr:    addr,
-		Handler: srv.E,
+		Addr:              addr,
+		Handler:           srv.E,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	go func() {
