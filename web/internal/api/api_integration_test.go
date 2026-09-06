@@ -26,7 +26,7 @@ func newTestServer(t *testing.T) (*api.Server, string) {
 	if err != nil || key == "" {
 		t.Fatalf("init auth: %v", err)
 	}
-	srv := api.New(s, []byte("secret"))
+	srv := api.New(s, []byte("secret"), api.Options{})
 	t.Cleanup(func() { _ = s.Close() })
 	return srv, key
 }
@@ -141,6 +141,55 @@ func TestAPIActivityAudit(t *testing.T) {
 	server.E.ServeHTTP(rec, req)
 	if rec.Code != 401 {
 		t.Fatalf("anonymous activity = %d, want 401", rec.Code)
+	}
+}
+
+func TestHealthReady(t *testing.T) {
+	server, _ := newTestServer(t)
+
+	// Probes need no auth.
+	for _, target := range []string{"/healthz", "/readyz"} {
+		req := httptest.NewRequest(http.MethodGet, target, nil)
+		rec := httptest.NewRecorder()
+		server.E.ServeHTTP(rec, req)
+		if rec.Code != 200 {
+			t.Fatalf("%s = %d, want 200: %s", target, rec.Code, rec.Body.String())
+		}
+	}
+	var ready map[string]string
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	rec := httptest.NewRecorder()
+	server.E.ServeHTTP(rec, req)
+	if err := json.NewDecoder(rec.Body).Decode(&ready); err != nil || ready["dialect"] == "" {
+		t.Fatalf("readyz missing dialect: %v (err %v)", ready, err)
+	}
+}
+
+func TestRateLimit(t *testing.T) {
+	cfg := &config.Config{DBPath: filepath.Join(t.TempDir(), "rate.db")}
+	s, err := storage.Open(cfg)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer s.Close()
+	key, err := auth.InitAdminKey(context.Background(), s)
+	if err != nil || key == "" {
+		t.Fatalf("init auth: %v", err)
+	}
+	server := api.New(s, []byte("secret"), api.Options{RateRPS: 1, RateBurst: 1})
+
+	get := func() int {
+		req := httptest.NewRequest(http.MethodGet, "/api/apps", nil)
+		req.Header.Set("X-API-Key", key)
+		rec := httptest.NewRecorder()
+		server.E.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	if code := get(); code != 200 {
+		t.Fatalf("first = %d, want 200", code)
+	}
+	if code := get(); code != 429 {
+		t.Fatalf("immediate second = %d, want 429", code)
 	}
 }
 
