@@ -1,0 +1,42 @@
+{{define "about.html"}} {{template "layout.head" .}}
+
+<!-- PAGE HEADER -->
+<div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+  <div>
+    <h1 class="text-xl font-semibold tracking-tight text-slate-900">
+      About Envious
+    </h1>
+    <p class="mt-1 text-sm text-slate-500">
+      Build information for this server. The git tag below is read live, so it
+      tracks the checkout even if the binary was built earlier.
+    </p>
+  </div>
+</div>
+
+<!-- ABOUT CARD -->
+<div class="mt-4 max-w-2xl rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+  <dl class="divide-y divide-slate-100 text-sm">
+    <div class="flex items-center justify-between gap-4 py-2.5">
+      <dt class="text-slate-500">Version</dt>
+      <dd class="font-semibold text-slate-900">{{.BuildVer}}</dd>
+    </div>
+    <div class="flex items-center justify-between gap-4 py-2.5">
+      <dt class="text-slate-500">Git tag (live)</dt>
+      <dd class="font-mono text-slate-900">{{with .GitTag}}{{.}}{{else}}unavailable{{end}}</dd>
+    </div>
+    <div class="flex items-center justify-between gap-4 py-2.5">
+      <dt class="text-slate-500">Commit</dt>
+      <dd class="font-mono text-slate-900">{{.Commit}}</dd>
+    </div>
+    <div class="flex items-center justify-between gap-4 py-2.5">
+      <dt class="text-slate-500">Built</dt>
+      <dd class="text-slate-900">{{.BuildDate}}</dd>
+    </div>
+    <div class="flex items-center justify-between gap-4 py-2.5">
+      <dt class="text-slate-500">Go</dt>
+      <dd class="font-mono text-slate-900">{{.GoVersion}}</dd>
+    </div>
+  </dl>
+</div>
+
+{{template "layout.foot" .}} {{end}}

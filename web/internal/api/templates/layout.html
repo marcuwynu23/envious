@@ -36,6 +36,13 @@
             <span class="text-xs text-slate-600">
               Secrets • Environments • Config
             </span>
+            <a
+              href="/about"
+              class="mt-1 inline-flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100 transition"
+              title="About this server"
+            >
+              {{with .Version}}{{.}}{{else}}dev{{end}}
+            </a>
           </div>
         </div>
 
@@ -62,7 +69,8 @@
     </main>
 
     <footer class="w-full px-6 py-4 text-center text-xs text-slate-500">
-      Envious {{with .Version}}{{.}}{{else}}dev{{end}}
+      Envious {{with .Version}}{{.}}{{else}}dev{{end}} ·
+      <a href="/about" class="underline hover:text-slate-700">About</a>
     </footer>
 
     <!-- CONFIRM MODAL (shared) -->
@@ -201,7 +209,8 @@
       {{end}} {{define "layout.login.foot"}}
     </main>
     <footer class="w-full px-6 py-4 text-center text-xs text-slate-500">
-      Envious {{with .Version}}{{.}}{{else}}dev{{end}}
+      Envious {{with .Version}}{{.}}{{else}}dev{{end}} ·
+      <a href="/about" class="underline hover:text-slate-700">About</a>
     </footer>
   </body>
 </html>

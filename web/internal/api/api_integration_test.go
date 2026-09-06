@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"envious-web/internal/api"
@@ -53,6 +54,50 @@ func TestAPIVersion(t *testing.T) {
 	var got map[string]string
 	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil || got["version"] != "v1.0.0" {
 		t.Fatalf("expected version v1.0.0, got %v (err %v)", got, err)
+	}
+}
+
+func TestAdminAbout(t *testing.T) {
+	server, key := newTestServer(t)
+	server.Version = "v1.0.0"
+
+	// Log in through the form to obtain the session cookie.
+	form := strings.NewReader("api_key=" + key)
+	req := httptest.NewRequest(http.MethodPost, "/login", form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	server.E.ServeHTTP(rec, req)
+	if rec.Code != 302 {
+		t.Fatalf("login = %d, want 302: %s", rec.Code, rec.Body.String())
+	}
+	cookies := rec.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatalf("login set no cookies")
+	}
+
+	// About page requires the session and shows build info.
+	req = httptest.NewRequest(http.MethodGet, "/about", nil)
+	for _, ck := range cookies {
+		req.AddCookie(ck)
+	}
+	rec = httptest.NewRecorder()
+	server.E.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("about = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, want := range []string{"About Envious", "v1.0.0", "Git tag"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("about page missing %q", want)
+		}
+	}
+
+	// Without a session the about page redirects to login.
+	req = httptest.NewRequest(http.MethodGet, "/about", nil)
+	rec = httptest.NewRecorder()
+	server.E.ServeHTTP(rec, req)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "Login") {
+		t.Fatalf("anonymous about = %d, want login page", rec.Code)
 	}
 }
 

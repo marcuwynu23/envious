@@ -11,12 +11,14 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"envious-web/internal/middleware"
 	"envious-web/internal/storage"
+	"envious-web/internal/version"
 
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -77,6 +79,7 @@ func (s *Server) registerRoutes() {
 
 	// Admin dashboard
 	e.GET("/", s.requireSession(s.handleAdminApps))
+	e.GET("/about", s.requireSession(s.handleAdminAbout))
 	e.POST("/apps", s.requireSession(s.handleAdminCreateApp))
 	e.POST("/apps/:id/delete", s.requireSession(s.handleAdminDeleteApp))
 	e.GET("/apps/:id", s.requireSession(s.handleAdminApp))
@@ -149,6 +152,23 @@ func (s *Server) verifySig(sig string) bool {
 // Handlers
 func (s *Server) handleVersion(c echo.Context) error {
 	return c.JSON(200, map[string]string{"version": s.appVersion()})
+}
+
+// handleAdminAbout renders the About page. GitTag is resolved live on every
+// request so it tracks the checkout even when the binary was built earlier.
+func (s *Server) handleAdminAbout(c echo.Context) error {
+	info := version.Current()
+	if info.Version == "dev" || info.Version == "" {
+		info.Version = s.appVersion()
+	}
+	return s.render(c, 200, "about.html", map[string]any{
+		"Title":     "Envious - About",
+		"BuildVer":  info.Version,
+		"Commit":    info.Commit,
+		"BuildDate": info.BuildDate,
+		"GitTag":    version.Describe(),
+		"GoVersion": runtime.Version(),
+	})
 }
 
 func (s *Server) handleLogin(c echo.Context) error {
