@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"envious-web/internal/config"
@@ -32,6 +33,10 @@ type Storage struct {
 	db            *sql.DB
 	dialect       string
 	encryptionKey []byte
+	// writeMu serializes writers on SQLite, which is single-writer: this
+	// turns lock convoys into a queue instead of SQLITE_BUSY retries.
+	// Postgres keeps real concurrency (retries in SetVar).
+	writeMu sync.Mutex
 }
 
 var (
@@ -761,11 +766,15 @@ func (s *Storage) GetVar(ctx context.Context, envID int64, key string) (*env.Var
 }
 
 func (s *Storage) SetVar(ctx context.Context, envID int64, key, value string) (*env.Variable, error) {
+	if s.dialect == DialectSQLite {
+		s.writeMu.Lock()
+		defer s.writeMu.Unlock()
+	}
 	// Concurrent writers on the same key collide (SQLITE_BUSY on SQLite,
 	// 40001 serialization failures on Postgres, or a lost insert race).
 	// Retry with backoff so bursts serialize instead of 500ing.
 	var err error
-	for attempt := 0; attempt < 10; attempt++ {
+	for attempt := 0; attempt < 20; attempt++ {
 		var v *env.Variable
 		v, err = s.setVarOnce(ctx, envID, key, value)
 		if err == nil {
