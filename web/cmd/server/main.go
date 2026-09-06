@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -16,11 +18,19 @@ import (
 	"envious-web/internal/auth"
 	"envious-web/internal/config"
 	"envious-web/internal/storage"
+	"envious-web/internal/version"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
+	showVersion := flag.Bool("version", false, "print version information and exit")
+	flag.Parse()
+	if *showVersion {
+		info := version.Current()
+		fmt.Printf("envious-server version %s (commit %s, built %s)\n", info.Version, info.Commit, info.BuildDate)
+		return
+	}
 	_ = godotenv.Load()
 	cfg := config.Load()
 
@@ -53,6 +63,7 @@ func main() {
 		secret = []byte("envious-default-secret-do-not-use-in-prod")
 	}
 	srv := api.New(store, secret)
+	srv.Version = version.Current().Version
 
 	addr := ":" + itoa(cfg.Port)
 	httpSrv := &http.Server{
@@ -61,7 +72,7 @@ func main() {
 	}
 
 	go func() {
-		logger.Info("server_start", "addr", addr)
+		logger.Info("server_start", "addr", addr, "version", version.Version, "commit", version.Commit, "build_date", version.BuildDate)
 		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("server_error", "error", err.Error())
 		}

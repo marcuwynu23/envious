@@ -2,7 +2,10 @@ FROM golang:1.23-alpine AS build
 WORKDIR /app
 COPY . .
 RUN go mod download
-RUN CGO_ENABLED=0 go build -o envious-server ./cmd/server
+ARG VERSION=dev
+ARG COMMIT=none
+ARG BUILD_DATE=unknown
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-X envious-web/internal/version.Version=${VERSION} -X envious-web/internal/version.Commit=${COMMIT} -X envious-web/internal/version.BuildDate=${BUILD_DATE}" -o envious-server ./cmd/server
 
 FROM alpine:3.19
 WORKDIR /srv

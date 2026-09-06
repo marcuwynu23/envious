@@ -61,6 +61,10 @@
       {{end}} {{define "layout.foot"}}
     </main>
 
+    <footer class="w-full px-6 py-4 text-center text-xs text-slate-500">
+      Envious {{with .Version}}{{.}}{{else}}dev{{end}}
+    </footer>
+
     <!-- CONFIRM MODAL (shared) -->
     <div
       id="confirm-modal"
@@ -196,6 +200,9 @@
     <main class="min-h-screen flex items-center justify-center">
       {{end}} {{define "layout.login.foot"}}
     </main>
+    <footer class="w-full px-6 py-4 text-center text-xs text-slate-500">
+      Envious {{with .Version}}{{.}}{{else}}dev{{end}}
+    </footer>
   </body>
 </html>
 {{end}}

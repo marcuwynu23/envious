@@ -23,9 +23,27 @@ import (
 )
 
 type Server struct {
-	E      *echo.Echo
-	Store  *storage.Storage
-	secret []byte
+	E       *echo.Echo
+	Store   *storage.Storage
+	secret  []byte
+	Version string
+}
+
+// appVersion returns the stamped server version ("dev" when unset).
+func (s *Server) appVersion() string {
+	if s.Version == "" {
+		return "dev"
+	}
+	return s.Version
+}
+
+// render renders a template with the shared Version variable injected.
+func (s *Server) render(c echo.Context, code int, name string, data map[string]any) error {
+	if data == nil {
+		data = map[string]any{}
+	}
+	data["Version"] = s.appVersion()
+	return c.Render(code, name, data)
 }
 
 func New(store *storage.Storage, secret []byte) *Server {
@@ -53,6 +71,9 @@ func (s *Server) registerRoutes() {
 
 	e.POST("/login", s.handleLogin)
 	e.POST("/logout", s.handleLogout)
+
+	// Public build info (no auth: version only, no secrets).
+	e.GET("/api/version", s.handleVersion)
 
 	// Admin dashboard
 	e.GET("/", s.requireSession(s.handleAdminApps))
@@ -100,7 +121,7 @@ func (t *TemplateRegistry) Render(w io.Writer, name string, data interface{}, c 
 func (s *Server) requireSession(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if !s.isAuthed(c) {
-			return c.Render(http.StatusOK, "login.html", map[string]any{"Title": "Envious - Login", "Error": ""})
+			return s.render(c, http.StatusOK, "login.html", map[string]any{"Title": "Envious - Login", "Error": ""})
 		}
 		return next(c)
 	}
@@ -126,6 +147,10 @@ func (s *Server) verifySig(sig string) bool {
 }
 
 // Handlers
+func (s *Server) handleVersion(c echo.Context) error {
+	return c.JSON(200, map[string]string{"version": s.appVersion()})
+}
+
 func (s *Server) handleLogin(c echo.Context) error {
 	var body struct {
 		APIKey string `json:"api_key" form:"api_key"`
@@ -139,7 +164,7 @@ func (s *Server) handleLogin(c echo.Context) error {
 		if c.Request().Header.Get("Content-Type") == "application/json" {
 			return c.JSON(401, map[string]string{"error": "invalid api key"})
 		}
-		return c.Render(200, "login.html", map[string]any{"Error": "Invalid API key"})
+		return s.render(c, 200, "login.html", map[string]any{"Error": "Invalid API key"})
 	}
 	cookie := &http.Cookie{
 		Name:     "envious_auth",
@@ -398,7 +423,7 @@ func (s *Server) handleDeleteVarByID(c echo.Context) error {
 // Admin handlers
 func (s *Server) handleAdminApps(c echo.Context) error {
 	apps, _ := s.Store.ListApps(c.Request().Context())
-	return c.Render(200, "apps.html", map[string]any{"Apps": apps})
+	return s.render(c, 200, "apps.html", map[string]any{"Apps": apps})
 }
 
 func (s *Server) handleAdminCreateApp(c echo.Context) error {
@@ -421,14 +446,14 @@ func (s *Server) handleAdminDeleteApp(c echo.Context) error {
 func (s *Server) handleAdminApp(c echo.Context) error {
 	appID, err := parseIDParam(c, "id")
 	if err != nil {
-		return c.Render(400, "error.html", map[string]any{"Error": "invalid id"})
+		return s.render(c, 400, "error.html", map[string]any{"Error": "invalid id"})
 	}
 	app, err := s.Store.GetApp(c.Request().Context(), appID)
 	if err != nil {
-		return c.Render(404, "error.html", map[string]any{"Error": "not found"})
+		return s.render(c, 404, "error.html", map[string]any{"Error": "not found"})
 	}
 	envs, _ := s.Store.ListEnvs(c.Request().Context(), appID)
-	return c.Render(200, "app_envs.html", map[string]any{
+	return s.render(c, 200, "app_envs.html", map[string]any{
 		"App":  app,
 		"Envs": envs,
 		"Error": "",
@@ -438,11 +463,11 @@ func (s *Server) handleAdminApp(c echo.Context) error {
 func (s *Server) handleAdminEnv(c echo.Context) error {
 	envID, err := parseIDParam(c, "envID")
 	if err != nil {
-		return c.Render(400, "error.html", map[string]any{"Error": "invalid id"})
+		return s.render(c, 400, "error.html", map[string]any{"Error": "invalid id"})
 	}
 	en, err := s.Store.GetEnv(c.Request().Context(), envID)
 	if err != nil {
-		return c.Render(404, "error.html", map[string]any{"Error": "not found"})
+		return s.render(c, 404, "error.html", map[string]any{"Error": "not found"})
 	}
 	page := int64(1)
 	pageSize := int64(25)
@@ -478,7 +503,7 @@ func (s *Server) handleAdminEnv(c echo.Context) error {
 		end = start + int64(len(vars)) - 1
 	}
 	app, _ := s.Store.GetApp(c.Request().Context(), en.AppID)
-	return c.Render(200, "vars.html", map[string]any{
+	return s.render(c, 200, "vars.html", map[string]any{
 		"Env":  en,
 		"Vars": vars,
 		"App":  app,
@@ -505,7 +530,7 @@ func (s *Server) handleAdminCreateEnv(c echo.Context) error {
 	if name == "" {
 		app, _ := s.Store.GetApp(c.Request().Context(), appID)
 		envs, _ := s.Store.ListEnvs(c.Request().Context(), appID)
-		return c.Render(200, "app_envs.html", map[string]any{
+		return s.render(c, 200, "app_envs.html", map[string]any{
 			"App":   app,
 			"Envs":  envs,
 			"Error": "Environment name is required",
@@ -518,7 +543,7 @@ func (s *Server) handleAdminCreateEnv(c echo.Context) error {
 		if err == storage.ErrDuplicateKey {
 			msg = "Environment already exists in this application"
 		}
-		return c.Render(200, "app_envs.html", map[string]any{
+		return s.render(c, 200, "app_envs.html", map[string]any{
 			"App":   app,
 			"Envs":  envs,
 			"Error": msg,
