@@ -20,7 +20,7 @@ envious/
 │   ├── test/             # external test packages mirroring cmd/ + internal/
 │   ├── Makefile          # build | release-build | test | test-coverage | deps | run | clean
 │   └── go.mod
-├── web/                  # Go 1.23+, Echo + SQLite — module `envious-web`
+├── web/                  # Go 1.25+, Echo + SQLite — module `envious-web`
 │   ├── cmd/server/main.go
 │   ├── internal/
 │   │   ├── api/          # Echo Server, REST + admin handlers, templates/, static/
@@ -40,8 +40,9 @@ envious/
 - No root `go.mod`. Always run Go commands **inside** `web/` or `cli/`.
 - API auth: header `X-API-Key`. Server stores only bcrypt hash. First run prints key once to stdout.
 - Admin dashboard is cookie-session (`envious_auth` HMAC-signed), not the API key directly.
-- Server config via env: `PORT=8080`, `DATABASE_PATH=./envious.db`, `ENCRYPTION_KEY` (optional), `LOG_LEVEL=info`, `LOG_FORMAT=json|text`.
+- Server config via env: `PORT=8080`, `DATABASE_PATH=./envious.db`, `DB_DRIVER=sqlite|postgres`, `DATABASE_URL` (pg only), `DB_MAX_OPEN_CONNS/DB_MAX_IDLE_CONNS`, `RATE_LIMIT_RPS/BURST` (0 disables), `AUTH_CACHE_TTL_SECONDS` (0 disables), `ENCRYPTION_KEY` (optional), `LOG_LEVEL=info`, `LOG_FORMAT=json|text`.
 - Audit trail: every mutation + login/logout is stored in `activity_logs` and streamed to stdout logs (`audit=true`); query via `GET /api/activity?action=&limit=`. Never log secret values or keys — metadata only.
+- Traffic hardening: WAL + busy_timeout (sqlite), write-conflict retries in `SetVar`, cached bcrypt hash, HTTP timeouts, per-IP rate limit (429), 1MB body cap, `/healthz` (live) + `/readyz` (DB ping). Storage tests run on sqlite always and postgres when `TEST_POSTGRES_URL` is set; compose profiles and `web/k8s/` cover deployment.
 - CLI config file: `~/.envious/config` (`api-base` + `api-key`). Set via `envious login --api-key=... --api-base=...`.
 
 ## 2. Loop Engineering Workflow (mandatory)

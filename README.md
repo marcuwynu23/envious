@@ -3,7 +3,7 @@
 <img src="./web/internal/api/static/logo/logo.svg" width="208">
 
 ![GitHub release](https://img.shields.io/github/v/release/marcuwynu23/envious)
-![Go version](https://img.shields.io/badge/Go-1.21%2B%20%7C%201.23%2B-00ADD8?logo=go&logoColor=white)
+![Go version](https://img.shields.io/badge/Go-1.21%2B%20%7C%201.25%2B-00ADD8?logo=go&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![Echo](https://img.shields.io/badge/Echo-4B32C3)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue?logo=apache)
@@ -26,10 +26,8 @@ Stop scattering `.env` files across every service — run one SQLite-backed serv
 - [Advantages Over Other Tools](#advantages-over-other-tools)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
-- [CLI Reference](#cli-reference)
-- [Configuration](#configuration)
 - [Example Output](#example-output)
-- [CI/CD Integration](#cicd-integration)
+- [User Guide](USER_GUIDE.md)
 - [Development](#development)
 - [Architecture](#architecture)
 
@@ -182,106 +180,22 @@ cd ../cli
 
 Prefer the dashboard? Open `http://localhost:8080/`, log in with the API key, and follow Applications → Environments → Variables.
 
-## CLI Reference
+## CLI & Configuration
 
-Global flags: `--config` (reserved), `-v/--verbose` (reserved). Config lives at `~/.envious/config`.
-
-### `login` — store credentials
+Daily commands — the full reference lives in the **[User Guide](USER_GUIDE.md)**:
 
 ```bash
 ./envious login --api-key=<KEY> --api-base=http://127.0.0.1:8080
-```
-
-| Flag        | Default | Description                        |
-| ----------- | ------- | ---------------------------------- |
-| `--api-key` | `""`    | Admin API key printed on first run |
-| `--api-base`| `""`    | Server base URL (keeps old value if omitted) |
-
-### `app` (aliases: `application`, `apps`)
-
-```bash
-./envious app list
-./envious app create myapp
-./envious app delete 2
-```
-
-| Command  | Args     | Description          |
-| -------- | -------- | -------------------- |
-| `list`   | —        | List all applications |
-| `create` | `<name>` | Create an application |
-| `delete` | `<id>`   | Delete by id (strict `> 0`) |
-
-### `env` (aliases: `environment`, `envs`, `environments`)
-
-```bash
-./envious env list --app-id 2
-./envious env create dev --app-id 2
-./envious env delete 10
-```
-
-| Flag      | Default | Description                              |
-| --------- | ------- | ---------------------------------------- |
-| `--app-id`| `0`     | `list`: `0` = all apps. `create`: `0` = default app |
-
-### `var` (aliases: `variable`, `vars`, `variables`) — values hidden by default
-
-```bash
-./envious var list 10
-./envious var list 10 --show-values
-./envious var list --app-id 2 --env-name development
+./envious app create billing && ./envious env create prod --app-id=2
 ./envious var set 10 DATABASE_URL "postgres://..."
-./envious var set --env-id 10 DATABASE_URL "postgres://..."
-./envious var delete 55
-./envious var export 10 > .env
-./envious var import 10 .env
-```
-
-| Flag            | Default | Description                                              |
-| --------------- | ------- | -------------------------------------------------------- |
-| `--env-id`      | `0`     | Environment id (alternative to positional `[env_id]`)    |
-| `--env-name`    | `""`    | Resolve env by name (with `--app-id`/`--app-name`)       |
-| `--app-id`      | `0`     | Application id for name resolution (`0` = all)           |
-| `--app-name`    | `""`    | Application name for name resolution                     |
-| `--show-values` | `false` | Show secret values in `list` (hidden by default)         |
-
-Resolution order: `--env-id` → positional `[env_id]` → `--env-name` (+ `--app-id`/`--app-name`). Ambiguous names error out instead of guessing.
-
-### Examples
-
-**Create a staging environment and seed it from dev:**
-
-```bash
-./envious env create staging --app-id 2
-./envious var export --app-id 2 --env-name development > staging.env
-./envious var import --app-id 2 --env-name staging staging.env
-```
-
-**Rotate a secret:**
-
-```bash
-./envious var set 10 API_KEY "new-secret"
 ./envious var list 10 --show-values
+./envious var export 10 > .env
 ```
 
-## Configuration
-
-The server needs no config file. All options are environment variables.
-
-| Variable        | Default        | Description                                                        |
-| --------------- | -------------- | ------------------------------------------------------------------ |
-| `PORT`          | `8080`         | TCP port the server binds                                          |
-| `DATABASE_PATH` | `./envious.db` | SQLite file (back this up)                                         |
-| `ENCRYPTION_KEY`| `""`           | Optional key enabling value encryption at rest; also signs sessions |
-| `LOG_LEVEL`     | `info`         | `debug` \| `info` \| `warn` \| `error`                              |
-| `LOG_FORMAT`    | `json`         | `json` (collectors) or `text` (local dev)                          |
-
-| Source                        | Precedence |
-| ----------------------------- | ---------- |
-| CLI flags (`--env-id`, …)     | Highest    |
-| CLI config (`~/.envious/config`) | Middle  |
-| Server env / built-in defaults| Lowest     |
-
-> First run prints the admin key once to stdout **and** writes it to `envious_api_key.txt` next to the database (mode `0600`). The server stores only its bcrypt hash. `ENCRYPTION_KEY` also signs dashboard sessions — always set it in production; the built-in fallback secret is dev-only.
+Server defaults need no config file: `PORT=8080`, SQLite at
+`./envious.db`, JSON logs to stdout. Everything else — Postgres mode,
+rate limits, audit queries, Fluent Bit, Kubernetes — is in the
+**[User Guide](USER_GUIDE.md)** (normal way + enterprise way).
 
 ## Example Output
 
@@ -301,78 +215,13 @@ API_KEY=secret
 DATABASE_URL=postgres://...
 ```
 
-## Operations: Logs and Audit Trail
+## Operations & Enterprise
 
-All logs go to stdout as JSON (`LOG_FORMAT=text` for local dev), so any generic collector works without an agent. Every request carries an `X-Request-ID` (generated when absent, echoed back) that joins request logs to audit entries.
-
-```bash
-# What collectors see (request + audit stream, audit=true marks the trail)
-{"level":"INFO","msg":"audit","audit":true,"actor":"admin","action":"app.create","resource_type":"app","resource_id":2,"detail":"name=auditco","ip":"127.0.0.1","request_id":"63d6709a9be0ca50"}
-{"level":"INFO","msg":"request","method":"POST","path":"/api/apps","status":201,"latency_ms":68,"remote_ip":"127.0.0.1","request_id":"63d6709a9be0ca50"}
-```
-
-Every mutation (API and dashboard) plus logins/logouts is also stored in SQLite and queryable:
-
-```bash
-curl -H "X-API-Key: $KEY" 'http://127.0.0.1:8080/api/activity?action=var.set&limit=50'
-```
-
-Audit details carry metadata only — never secret values or keys.
-
-### Fluent Bit
-
-Tail the container/file output with the stock `json` parser — no custom parsing needed:
-
-```ini
-[INPUT]
-    Name              tail
-    Path              /var/log/envious/*.log
-    Parser            json
-    Tag               envious.*
-    Refresh_Interval  5
-
-[OUTPUT]
-    Name  stdout
-    Match envious.*
-# ...or forward to Loki/Elasticsearch/OpenSearch with their output plugins
-```
-
-With Docker, Fluent Bit's `forward` or `docker` input reads the same JSON lines from the container log driver. Alert on `"action":"auth.login_failed"` for brute-force watch, and on `"audit":true` to mirror the trail into long-term storage.
-
-## CI/CD Integration
-### GitHub Actions (publish `.env` at deploy time)
-
-```yaml
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download CLI
-        run: |
-          gh release download v1.0.0 \
-            --repo marcuwynu23/envious \
-            --pattern 'envious-linux-amd64' \
-            --output ./envious
-          chmod +x ./envious
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Export environment
-        run: ./envious var export --env-id 10 > .env
-        env:
-          # login once in a setup step, or point at a pre-baked config
-          HOME: ${{ github.workspace }}
-```
-
-### Server via GHCR
-
-```yaml
-jobs:
-  deploy-server:
-    runs-on: ubuntu-latest
-    steps:
-      - run: docker pull ghcr.io/marcuwynu23/envious-web:latest
-```
+Logs (JSON to stdout, Fluent Bit-ready), the audit trail, Postgres mode,
+Docker Compose profiles, Kubernetes manifests, hardening, backups, and
+load testing are covered in depth in the **[User Guide](USER_GUIDE.md)**
+— start with the normal way, graduate to the enterprise way when you
+need multi-instance scale.
 
 ## Development
 
@@ -380,7 +229,7 @@ jobs:
 
 | Tool | Version   | Purpose              |
 | ---- | --------- | -------------------- |
-| Go   | 1.21+ (cli), 1.23+ (web) | Compiler |
+| Go   | 1.21+ (cli), 1.25+ (web) | Compiler |
 | Make | Any       | Build automation     |
 | Docker | Any    | Server image (optional) |
 
@@ -427,6 +276,7 @@ envious/
 │       └── env/            # env models
 ├── .github/workflows/      # release-cli.yml, release-web-docker.yml
 ├── AGENTS.md               # contributor/agent operating manual
+├── USER_GUIDE.md           # full operator manual (normal + enterprise)
 ├── CHANGELOG.md | CONTRIBUTING.md | CODE_OF_CONDUCT.md | LICENSE
 ```
 
