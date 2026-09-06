@@ -272,7 +272,8 @@ The server needs no config file. All options are environment variables.
 | `PORT`          | `8080`         | TCP port the server binds                                          |
 | `DATABASE_PATH` | `./envious.db` | SQLite file (back this up)                                         |
 | `ENCRYPTION_KEY`| `""`           | Optional key enabling value encryption at rest; also signs sessions |
-| `LOG_LEVEL`     | `info`         | Log level                                                          |
+| `LOG_LEVEL`     | `info`         | `debug` \| `info` \| `warn` \| `error`                              |
+| `LOG_FORMAT`    | `json`         | `json` (collectors) or `text` (local dev)                          |
 
 | Source                        | Precedence |
 | ----------------------------- | ---------- |
@@ -300,8 +301,45 @@ API_KEY=secret
 DATABASE_URL=postgres://...
 ```
 
-## CI/CD Integration
+## Operations: Logs and Audit Trail
 
+All logs go to stdout as JSON (`LOG_FORMAT=text` for local dev), so any generic collector works without an agent. Every request carries an `X-Request-ID` (generated when absent, echoed back) that joins request logs to audit entries.
+
+```bash
+# What collectors see (request + audit stream, audit=true marks the trail)
+{"level":"INFO","msg":"audit","audit":true,"actor":"admin","action":"app.create","resource_type":"app","resource_id":2,"detail":"name=auditco","ip":"127.0.0.1","request_id":"63d6709a9be0ca50"}
+{"level":"INFO","msg":"request","method":"POST","path":"/api/apps","status":201,"latency_ms":68,"remote_ip":"127.0.0.1","request_id":"63d6709a9be0ca50"}
+```
+
+Every mutation (API and dashboard) plus logins/logouts is also stored in SQLite and queryable:
+
+```bash
+curl -H "X-API-Key: $KEY" 'http://127.0.0.1:8080/api/activity?action=var.set&limit=50'
+```
+
+Audit details carry metadata only — never secret values or keys.
+
+### Fluent Bit
+
+Tail the container/file output with the stock `json` parser — no custom parsing needed:
+
+```ini
+[INPUT]
+    Name              tail
+    Path              /var/log/envious/*.log
+    Parser            json
+    Tag               envious.*
+    Refresh_Interval  5
+
+[OUTPUT]
+    Name  stdout
+    Match envious.*
+# ...or forward to Loki/Elasticsearch/OpenSearch with their output plugins
+```
+
+With Docker, Fluent Bit's `forward` or `docker` input reads the same JSON lines from the container log driver. Alert on `"action":"auth.login_failed"` for brute-force watch, and on `"audit":true` to mirror the trail into long-term storage.
+
+## CI/CD Integration
 ### GitHub Actions (publish `.env` at deploy time)
 
 ```yaml

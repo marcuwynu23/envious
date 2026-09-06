@@ -40,7 +40,8 @@ envious/
 - No root `go.mod`. Always run Go commands **inside** `web/` or `cli/`.
 - API auth: header `X-API-Key`. Server stores only bcrypt hash. First run prints key once to stdout.
 - Admin dashboard is cookie-session (`envious_auth` HMAC-signed), not the API key directly.
-- Server config via env: `PORT=8080`, `DATABASE_PATH=./envious.db`, `ENCRYPTION_KEY` (optional), `LOG_LEVEL=info`.
+- Server config via env: `PORT=8080`, `DATABASE_PATH=./envious.db`, `ENCRYPTION_KEY` (optional), `LOG_LEVEL=info`, `LOG_FORMAT=json|text`.
+- Audit trail: every mutation + login/logout is stored in `activity_logs` and streamed to stdout logs (`audit=true`); query via `GET /api/activity?action=&limit=`. Never log secret values or keys — metadata only.
 - CLI config file: `~/.envious/config` (`api-base` + `api-key`). Set via `envious login --api-key=... --api-base=...`.
 
 ## 2. Loop Engineering Workflow (mandatory)
