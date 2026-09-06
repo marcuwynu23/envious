@@ -1,0 +1,12 @@
+# Keep the Docker build context lean: source + go.mod/go.sum only.
+.git/
+.github/
+data/
+*.db
+dist/
+coverage.out
+coverage.html
+.env
+envious_api_key.txt
+.air.toml
+tmp/
