@@ -134,7 +134,7 @@ cd cli
 make release-build
 ```
 
-The binary lands in `dist/envious` (`dist/envious.exe` on Windows) with `Version`/`Commit`/`BuildDate` baked in. Plain `make build` gives an unstamped dev binary.
+The binary lands in `dist/envious` (`dist/envious.exe` on Windows) with `Version`/`Commit`/`BuildDate` baked in. Plain `make build` gives an unstamped dev binary. Set an explicit version with `make build VERSION=v1.0.0` (same in `web/`), then `./envious version` shows it; the server reports it via `-version`, `GET /api/version`, the dashboard footer, and the startup log.
 
 ### Docker / Podman
 
