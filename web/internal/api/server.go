@@ -2,18 +2,19 @@ package api
 
 import (
 	"bufio"
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/fs"
 	"io"
+	"io/fs"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
+
 	"envious-web/internal/middleware"
 	"envious-web/internal/storage"
 
@@ -121,14 +122,7 @@ func (s *Server) sign(v string) string {
 
 func (s *Server) verifySig(sig string) bool {
 	expected := s.sign("ok")
-	if len(sig) != len(expected) {
-		return false
-	}
-	var res byte
-	for i := 0; i < len(sig); i++ {
-		res |= sig[i] ^ expected[i]
-	}
-	return res == 0
+	return hmac.Equal([]byte(sig), []byte(expected))
 }
 
 // Handlers
@@ -139,7 +133,7 @@ func (s *Server) handleLogin(c echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(400, map[string]string{"error": "invalid body"})
 	}
-	hash, err := s.Store.GetAPIKeyHash(context.Background())
+	hash, err := s.Store.GetAPIKeyHash(c.Request().Context())
 	ok := (err == nil && bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.APIKey)) == nil)
 	if !ok {
 		if c.Request().Header.Get("Content-Type") == "application/json" {
@@ -222,6 +216,9 @@ func (s *Server) handleDeleteApp(c echo.Context) error {
 		return c.JSON(400, map[string]string{"error": "invalid id"})
 	}
 	if err := s.Store.DeleteApp(c.Request().Context(), id); err != nil {
+		if err == storage.ErrNotFound {
+			return c.JSON(404, map[string]string{"error": "not found"})
+		}
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}
 	return c.NoContent(204)
@@ -319,6 +316,9 @@ func (s *Server) handleDeleteEnv(c echo.Context) error {
 		return c.JSON(400, map[string]string{"error": "invalid id"})
 	}
 	if err := s.Store.DeleteEnv(c.Request().Context(), id); err != nil {
+		if err == storage.ErrNotFound {
+			return c.JSON(404, map[string]string{"error": "not found"})
+		}
 		return c.JSON(500, map[string]string{"error": err.Error()})
 	}
 	return c.NoContent(204)
@@ -589,6 +589,7 @@ func (s *Server) handleAdminImportVars(c echo.Context) error {
 	defer func() { _ = f.Close() }()
 
 	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 64*1024), 1024*1024)
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -605,6 +606,7 @@ func (s *Server) handleAdminImportVars(c echo.Context) error {
 		}
 		_, _ = s.Store.SetVar(c.Request().Context(), envID, key, val)
 	}
+	_ = sc.Err()
 
 	return c.Redirect(302, "/apps/"+c.Param("appID")+"/envs/"+c.Param("envID"))
 }
@@ -614,8 +616,14 @@ func parseIDParam(c echo.Context, name string) (int64, error) {
 }
 
 func parseInt64(s string) (int64, error) {
-	var x int64
-	_, err := fmt.Sscan(s, &x)
-	return x, err
+	s = strings.TrimSpace(s)
+	id, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	if id <= 0 {
+		return 0, fmt.Errorf("invalid id %q: must be > 0", s)
+	}
+	return id, nil
 }
 

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -79,31 +80,7 @@ func main() {
 }
 
 func itoa(n int) string {
-	return fmtInt(n)
-}
-
-func fmtInt(n int) string {
-	// avoid importing strconv just for a single place
-	var b [20]byte
-	i := len(b)
-	neg := n < 0
-	u := n
-	if neg {
-		u = -n
-	}
-	for {
-		i--
-		b[i] = byte('0' + u%10)
-		u /= 10
-		if u == 0 {
-			break
-		}
-	}
-	if neg {
-		i--
-		b[i] = '-'
-	}
-	return string(b[i:])
+	return strconv.Itoa(n)
 }
 
 func writeInitialAPIKeyFile(dbPath, key string) (string, error) {

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"log/slog"
 	"time"
 
@@ -42,7 +41,7 @@ func APIKeyAuth(s *storage.Storage) echo.MiddlewareFunc {
 			if key == "" {
 				return echo.NewHTTPError(401, "missing API key")
 			}
-			if !auth.Verify(context.Background(), s, key) {
+			if !auth.Verify(c.Request().Context(), s, key) {
 				return echo.NewHTTPError(401, "invalid API key")
 			}
 			return next(c)
