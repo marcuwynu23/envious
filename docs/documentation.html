@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Envious Documentation — Install, Configure, Operate</title>
+  <meta name="description"
+    content="Envious documentation: installation, quick start, CLI reference, server configuration, REST API, audit trail, and Fluent Bit log collection." />
+  <meta name="author" content="Mark Wayne Menorca" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://marcuwynu23.github.io/envious/documentation.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Envious Documentation" />
+  <meta property="og:description" content="Install, configure, and operate your self-hosted Envious server." />
+  <meta property="og:url" content="https://marcuwynu23.github.io/envious/documentation.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="index.html" class="logo">Envious<span>.</span></a>
+      <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false"
+        aria-controls="nav-drawer">
+        <span class="nav-toggle__bar"></span>
+        <span class="nav-toggle__bar"></span>
+        <span class="nav-toggle__bar"></span>
+      </button>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="index.html#features">Features</a>
+        <a href="documentation.html" class="active">Documentation</a>
+        <a href="downloads.html">Downloads</a>
+        <a href="support.html">Support</a>
+      </nav>
+      <div class="nav-backdrop" id="nav-backdrop" aria-hidden="true"></div>
+      <div class="nav-drawer" id="nav-drawer" role="dialog" aria-label="Navigation menu" aria-hidden="true">
+        <ul class="nav-drawer__links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="documentation.html">Documentation</a></li>
+          <li><a href="downloads.html">Downloads</a></li>
+          <li><a href="support.html">Support</a></li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <main class="container-fluid">
+    <section id="installation">
+      <h2>Installation</h2>
+      <p class="section-lead">No Go toolchain needed. Download a ready-to-run binary or the Docker image —
+        building from source is only for contributors. All assets live on the
+        <a href="downloads.html">Downloads</a> page.</p>
+      <h3>Option 1 — Download the CLI (recommended)</h3>
+      <p class="section-lead">Pick your platform, download, and run. No install step.</p>
+      <pre class="block"><code># Linux (x86_64)
+curl -L -o envious \
+  https://github.com/marcuwynu23/envious/releases/latest/download/envious-linux-amd64
+chmod +x envious
+./envious version</code></pre>
+      <pre class="block"><code># macOS (Apple Silicon; use envious-darwin-amd64 on Intel)
+curl -L -o envious \
+  https://github.com/marcuwynu23/envious/releases/latest/download/envious-darwin-arm64
+chmod +x envious
+./envious version</code></pre>
+      <pre class="block"><code># Windows (PowerShell)
+Invoke-WebRequest `
+  -Uri https://github.com/marcuwynu23/envious/releases/latest/download/envious-windows-amd64.exe `
+  -OutFile envious.exe
+.\envious.exe version</code></pre>
+      <h3>Option 2 — Run the server with Docker</h3>
+      <pre class="block"><code>docker run -p 8080:8080 \
+  -e ENCRYPTION_KEY="pick-a-long-random-value" \
+  -v envious-data:/data \
+  -e DATABASE_PATH=/data/envious.db \
+  ghcr.io/marcuwynu23/envious-web:latest
+# first start prints: Envious initial API key (store it securely): &lt;KEY&gt;</code></pre>
+      <h3>Option 3 — Build from source (contributors)</h3>
+      <p class="section-lead">Requires Go 1.21+ for the CLI and Go 1.23+ for the server.</p>
+      <pre class="block"><code>cd cli &amp;&amp; go mod tidy &amp;&amp; go build -o envious .
+cd ../web &amp;&amp; go mod tidy &amp;&amp; go run ./cmd/server</code></pre>
+    </section>
+
+    <section id="quickstart">
+      <h2>Quick Start</h2>
+      <p class="section-lead">Three steps, about a minute. First start the server (or open the dashboard at
+        <code>http://localhost:8080/</code>) and save the admin key it prints on first run.</p>
+      <pre class="block"><code>./envious login --api-key=&lt;KEY&gt; --api-base=http://127.0.0.1:8080
+./envious app create billing
+./envious env create prod --app-id=2
+./envious var set 10 DATABASE_URL "postgres://..."
+./envious var list 10
+./envious var export 10 &gt; .env</code></pre>
+      <p class="section-lead">Prefer a UI? Log in with the API key and follow Applications → Environments → Variables. The server version is always visible in the header badge and on the <code>/about</code> page.</p>
+    </section>
+
+    <section id="cli">
+      <h2>CLI Reference</h2>
+      <div class="table-wrap">
+        <table class="spec">
+          <tr><th>Command</th><th>What it does</th></tr>
+          <tr><td><code>login --api-key --api-base</code></td><td>Store credentials in <code>~/.envious/config</code></td></tr>
+          <tr><td><code>app list | create &lt;name&gt; | delete &lt;id&gt;</code></td><td>Manage applications</td></tr>
+          <tr><td><code>env list | create | delete</code></td><td>Manage environments (<code>--app-id 0</code> = all for list, default for create)</td></tr>
+          <tr><td><code>var list [env] [--show-values]</code></td><td>List variables (values hidden by default)</td></tr>
+          <tr><td><code>var set [env] &lt;key&gt; &lt;value&gt;</code></td><td>Create or update (bumps version)</td></tr>
+          <tr><td><code>var delete &lt;var_id&gt;</code></td><td>Delete by variable id</td></tr>
+          <tr><td><code>var export [env]</code></td><td>Print <code>.env</code> format</td></tr>
+          <tr><td><code>var import [env] &lt;file&gt;</code></td><td>Import a <code>.env</code> file</td></tr>
+          <tr><td><code>version</code></td><td>Print stamped version info</td></tr>
+        </table>
+      </div>
+      <p class="section-lead">Environments resolve as <code>--env-id</code> → positional id → <code>--env-name</code> with <code>--app-id</code>/<code>--app-name</code>. Ambiguous names error instead of guessing.</p>
+    </section>
+
+    <section id="configuration">
+      <h2>Server Configuration</h2>
+      <div class="table-wrap">
+        <table class="spec">
+          <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+          <tr><td><code>PORT</code></td><td><code>8080</code></td><td>TCP port</td></tr>
+          <tr><td><code>DATABASE_PATH</code></td><td><code>./envious.db</code></td><td>SQLite file — back this up</td></tr>
+          <tr><td><code>ENCRYPTION_KEY</code></td><td>—</td><td>Enables value encryption at rest; also signs dashboard sessions. Always set in production.</td></tr>
+          <tr><td><code>LOG_LEVEL</code></td><td><code>info</code></td><td><code>debug</code> | <code>info</code> | <code>warn</code> | <code>error</code></td></tr>
+          <tr><td><code>LOG_FORMAT</code></td><td><code>json</code></td><td><code>json</code> for collectors, <code>text</code> for local dev</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section id="api">
+      <h2>REST API</h2>
+      <p class="section-lead">All endpoints live under <code>/api</code> and require <code>X-API-Key</code>, except <code>GET /api/version</code> which is public.</p>
+      <div class="table-wrap">
+        <table class="spec">
+          <tr><th>Endpoint</th><th>Description</th></tr>
+          <tr><td><code>GET /api/version</code></td><td>Build version (public)</td></tr>
+          <tr><td><code>GET /api/apps · POST /api/apps</code></td><td>List / create applications</td></tr>
+          <tr><td><code>GET /api/apps/:id · DELETE /api/apps/:id</code></td><td>Fetch / delete an application</td></tr>
+          <tr><td><code>GET /api/envs?app_id= · POST /api/envs</code></td><td>List (optionally filtered) / create environments</td></tr>
+          <tr><td><code>GET /api/envs/:id · DELETE /api/envs/:id</code></td><td>Fetch / delete an environment</td></tr>
+          <tr><td><code>GET /api/envs/:id/vars · POST /api/envs/:id/vars</code></td><td>List / set variables</td></tr>
+          <tr><td><code>PUT /api/vars/:id · DELETE /api/vars/:id</code></td><td>Update / delete a variable</td></tr>
+          <tr><td><code>GET /api/activity?action=&amp;limit=</code></td><td>Query the audit trail</td></tr>
+        </table>
+      </div>
+      <p class="section-lead">Errors are <code>{"error": "..."}</code>. Missing resources return <code>404</code>, duplicates <code>409</code>, bad input <code>400</code>, bad key <code>401</code>.</p>
+    </section>
+
+    <section id="operations">
+      <h2>Operations: Logs and Audit</h2>
+      <p class="section-lead">Logs go to stdout as JSON with request IDs (<code>X-Request-ID</code>). Every mutation and login lands in the audit trail — in SQLite and on the log stream (<code>"audit":true</code>). Details carry metadata only, never secret values.</p>
+      <pre class="block"><code># query the trail
+curl -H "X-API-Key: $KEY" 'http://127.0.0.1:8080/api/activity?action=var.set&amp;limit=50'</code></pre>
+      <h3>Fluent Bit</h3>
+      <pre class="block"><code>[INPUT]
+    Name              tail
+    Path              /var/log/envious/*.log
+    Parser            json
+    Tag               envious.*
+    Refresh_Interval  5
+
+[OUTPUT]
+    Name  stdout
+    Match envious.*</code></pre>
+      <p class="section-lead">Forward to Loki, Elasticsearch, or OpenSearch with their output plugins. Alert on <code>"action":"auth.login_failed"</code> and mirror <code>"audit":true</code> into long-term storage.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-credit">Built by <a href="https://github.com/marcuwynu23">Mark Wayne Menorca</a> · Apache 2.0 Licensed</p>
+      <div class="footer-links">
+        <a href="https://github.com/marcuwynu23/envious">GitHub</a>
+        <a href="https://github.com/marcuwynu23/envious/releases">Releases</a>
+        <a href="support.html">Support</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="nav.js"></script>
+</body>
+
+</html>

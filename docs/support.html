@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Envious Support — Help for Production Deployments</title>
+  <meta name="description"
+    content="Get help with Envious: community support via GitHub issues and production support by email at support@marcuwynu.space." />
+  <meta name="author" content="Mark Wayne Menorca" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://marcuwynu23.github.io/envious/support.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Envious Support" />
+  <meta property="og:description" content="Community and production support for your Envious deployment." />
+  <meta property="og:url" content="https://marcuwynu23.github.io/envious/support.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="index.html" class="logo">Envious<span>.</span></a>
+      <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false"
+        aria-controls="nav-drawer">
+        <span class="nav-toggle__bar"></span>
+        <span class="nav-toggle__bar"></span>
+        <span class="nav-toggle__bar"></span>
+      </button>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="index.html#features">Features</a>
+        <a href="documentation.html">Documentation</a>
+        <a href="downloads.html">Downloads</a>
+        <a href="support.html" class="active">Support</a>
+      </nav>
+      <div class="nav-backdrop" id="nav-backdrop" aria-hidden="true"></div>
+      <div class="nav-drawer" id="nav-drawer" role="dialog" aria-label="Navigation menu" aria-hidden="true">
+        <ul class="nav-drawer__links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="documentation.html">Documentation</a></li>
+          <li><a href="downloads.html">Downloads</a></li>
+          <li><a href="support.html">Support</a></li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <main class="container-fluid">
+    <section id="contact">
+      <h2>Support</h2>
+      <p class="section-lead">Running Envious in production and need a hand? Reach out — include your version
+        (<code>envious version</code> / <code>/api/version</code>), platform, and the relevant log lines.</p>
+      <div class="contact-card">
+        <h3>Production support</h3>
+        <p>Deployment help, upgrades, backup strategy, log-pipeline wiring, and bug triage for production installs.</p>
+        <a class="mail" href="mailto:support@marcuwynu.space?subject=Envious%20support%20request">support@marcuwynu.space</a>
+      </div>
+    </section>
+
+    <section id="channels">
+      <h2>Support channels</h2>
+      <div class="table-wrap">
+        <table class="spec">
+          <tr><th>Channel</th><th>Best for</th><th>Where</th></tr>
+          <tr><td>Email</td><td>Production issues, private deployment details</td><td><a href="mailto:support@marcuwynu.space">support@marcuwynu.space</a></td></tr>
+          <tr><td>GitHub Issues</td><td>Bug reports and feature requests</td><td><a href="https://github.com/marcuwynu23/envious/issues">marcuwynu23/envious issues</a></td></tr>
+          <tr><td>Documentation</td><td>Self-serve setup and operations</td><td><a href="documentation.html">Documentation</a></td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section id="include">
+      <h2>What to include</h2>
+      <ul class="why-list">
+        <li><strong>Version</strong> — output of <code>envious version</code> and <code>GET /api/version</code>.</li>
+        <li><strong>Platform</strong> — OS/arch, binary vs Docker image tag.</li>
+        <li><strong>What happened</strong> — expected vs actual, steps to reproduce.</li>
+        <li><strong>Logs</strong> — relevant JSON log lines (they carry <code>request_id</code> for correlation).</li>
+        <li><strong>Never send secrets</strong> — redact API keys, <code>ENCRYPTION_KEY</code>, and variable values.</li>
+      </ul>
+    </section>
+
+    <section id="faq">
+      <h2>Quick answers</h2>
+      <div class="use-case-card">
+        <h3>I lost the admin API key</h3>
+        <p>The server stores only a bcrypt hash, so it cannot be recovered. If you kept <code>envious_api_key.txt</code> (written next to the database on first run), use that — otherwise reset the stored hash directly in SQLite.</p>
+      </div>
+      <div class="use-case-card">
+        <h3>The CLI says 401</h3>
+        <p>Re-run <code>login</code> with the right <code>--api-base</code> and key, then check the server audit trail for <code>auth.login_failed</code> entries.</p>
+      </div>
+      <div class="use-case-card">
+        <h3>How do I back up?</h3>
+        <p>Copy the SQLite file at <code>DATABASE_PATH</code>. That single file holds apps, environments, variables, and the audit trail.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-credit">Built by <a href="https://github.com/marcuwynu23">Mark Wayne Menorca</a> · Apache 2.0 Licensed</p>
+      <div class="footer-links">
+        <a href="https://github.com/marcuwynu23/envious">GitHub</a>
+        <a href="https://github.com/marcuwynu23/envious/releases">Releases</a>
+        <a href="support.html">Support</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="nav.js"></script>
+</body>
+
+</html>

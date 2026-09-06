@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Envious — Self-Hosted Environment Variable Manager</title>
+  <meta name="description"
+    content="Envious is a self-hosted, open-source environment variable manager: one SQLite-backed server with an admin dashboard and audit trail, plus a cross-platform CLI. Apache 2.0 licensed." />
+  <meta name="keywords"
+    content="Envious, environment variables, secrets manager, self-hosted, SQLite, Go, CLI, audit trail, Fluent Bit" />
+  <meta name="author" content="Mark Wayne Menorca" />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <link rel="canonical" href="https://marcuwynu23.github.io/envious/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Envious — Self-Hosted Environment Variable Manager" />
+  <meta property="og:description"
+    content="One server, every app, environment, and variable — with versioning, encryption at rest, audit trail, and a CLI for Linux, macOS, and Windows." />
+  <meta property="og:url" content="https://marcuwynu23.github.io/envious/" />
+  <meta property="og:site_name" content="Envious" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Envious — Self-Hosted Environment Variable Manager" />
+  <meta name="twitter:description"
+    content="Stop scattering .env files. Run one server, manage every secret from a dashboard or CLI." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Envious",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Linux, macOS, Windows",
+      "url": "https://marcuwynu23.github.io/envious/",
+      "downloadUrl": "https://github.com/marcuwynu23/envious/releases",
+      "codeRepository": "https://github.com/marcuwynu23/envious",
+      "license": "https://github.com/marcuwynu23/envious/blob/main/LICENSE",
+      "description": "Self-hosted environment variable manager with admin dashboard, audit trail, and CLI."
+    }
+  </script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="index.html" class="logo">Envious<span>.</span></a>
+      <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false"
+        aria-controls="nav-drawer">
+        <span class="nav-toggle__bar"></span>
+        <span class="nav-toggle__bar"></span>
+        <span class="nav-toggle__bar"></span>
+      </button>
+      <nav class="nav">
+        <a href="index.html" class="active">Home</a>
+        <a href="index.html#features">Features</a>
+        <a href="documentation.html">Documentation</a>
+        <a href="downloads.html">Downloads</a>
+        <a href="support.html">Support</a>
+      </nav>
+      <div class="nav-backdrop" id="nav-backdrop" aria-hidden="true"></div>
+      <div class="nav-drawer" id="nav-drawer" role="dialog" aria-label="Navigation menu" aria-hidden="true">
+        <ul class="nav-drawer__links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="documentation.html">Documentation</a></li>
+          <li><a href="downloads.html">Downloads</a></li>
+          <li><a href="support.html">Support</a></li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <main class="container-fluid">
+    <section class="hero" id="home">
+      <div class="hero-inner">
+        <div class="hero-content">
+          <p class="hero-eyebrow">Open source · Self-hosted · Apache 2.0</p>
+          <h1>Envious</h1>
+          <p class="tagline">Self-hosted environment variable manager</p>
+          <p class="hero-desc">
+            Stop scattering <code>.env</code> files across servers and laptops. Run one
+            SQLite-backed server with an admin dashboard and audit trail, and manage
+            every application, environment, and variable — versioned, optionally
+            encrypted, and one CLI call away.
+          </p>
+          <div class="hero-tags">
+            <span>Open Source (Apache 2.0)</span>
+            <span>Self-Hosted</span>
+            <span>SQLite</span>
+            <span>Audit Trail</span>
+            <span>Linux · macOS · Windows</span>
+            <span>Docker</span>
+          </div>
+          <div class="hero-cta">
+            <a href="downloads.html" class="btn btn-primary">Get Envious</a>
+            <a href="documentation.html" class="btn btn-outline">See how it works</a>
+          </div>
+        </div>
+        <div class="hero-script">
+          <div class="hero-script-editor">
+            <div class="hero-script-tabbar">
+              <div class="hero-script-tab"><span>terminal</span></div>
+            </div>
+            <pre><code><span class="term-prompt">$</span> <span class="term-cmd">./envious login --api-key=*** --api-base=http://127.0.0.1:8080</span>
+<span class="term-out">login saved</span>
+<span class="term-prompt">$</span> <span class="term-cmd">./envious app create billing</span>
+<span class="term-out">ok</span>
+<span class="term-prompt">$</span> <span class="term-cmd">./envious env create prod --app-id=2</span>
+<span class="term-out">ok</span>
+<span class="term-prompt">$</span> <span class="term-cmd">./envious var set 10 DATABASE_URL "postgres://..."</span>
+<span class="term-out">ok</span>
+<span class="term-comment"># every step above is written to the audit trail</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="what">
+      <h2>What is Envious?</h2>
+      <p class="intro-text">
+        Envious is a self-hosted secrets-and-config manager for teams that outgrow
+        loose <code>.env</code> files but don't need Vault-scale infrastructure. One
+        server (<code>envious-server</code>: REST API + admin dashboard, SQLite storage)
+        holds every application, environment, and variable. One CLI
+        (<code>envious</code>) creates, lists, sets, exports, and imports them —
+          on Linux, macOS, and Windows. It is Apache-2.0-licensed open source, ready for
+        enterprise use: structured JSON logs for any collector, a full audit trail,
+        and versioned, encrypted storage.
+      </p>
+    </section>
+
+    <section id="why">
+      <h2>Why use Envious?</h2>
+      <p class="section-lead">One source of truth for configuration, from side project to production.</p>
+      <ul class="why-list">
+        <li><strong>End secret sprawl</strong> — Every app, environment, and variable lives in one SQLite-backed server instead of chat threads and backup folders.</li>
+        <li><strong>Onboard in minutes</strong> — New teammates log in once and export the exact working <code>.env</code>. No more copy-paste over chat.</li>
+        <li><strong>Promote with confidence</strong> — First-class <code>dev</code> / <code>staging</code> / <code>prod</code> environments make drift visible.</li>
+        <li><strong>Prove what changed</strong> — Per-variable versioning plus an append-only audit trail (who, what, when, from where).</li>
+        <li><strong>Run anywhere</strong> — A single binary plus a single file. Localhost, VPS, homelab, or container.</li>
+      </ul>
+    </section>
+
+    <section id="when">
+      <h2>When to use Envious?</h2>
+      <p class="section-lead">Anywhere configuration is currently a folder of <code>.env.backup</code> files.</p>
+      <div class="use-case-card">
+        <h3>Multi-environment services</h3>
+        <p>Keep <code>dev</code>, <code>staging</code>, and <code>prod</code> variables for every app side by side, and seed one environment from another with export and import.</p>
+      </div>
+      <div class="use-case-card">
+        <h3>Team onboarding</h3>
+        <p>Teammates run <code>login</code> once, then <code>var export</code> the environment they need. Access is one admin key to rotate, not fifty files to chase.</p>
+      </div>
+      <div class="use-case-card">
+        <h3>Regulated and audited shops</h3>
+        <p>Every mutation lands in the audit trail — queryable via the API and streamed as JSON logs to Fluent Bit, Loki, or Elasticsearch for retention and alerting.</p>
+      </div>
+      <div class="use-case-card">
+        <h3>CI/CD configuration</h3>
+        <p>Pipelines fetch the target environment through the CLI or API and write a <code>.env</code> at deploy time. No secrets baked into images or repos.</p>
+      </div>
+    </section>
+
+    <section id="advantages">
+      <h2>Advantages at a glance</h2>
+      <ul class="advantages-list">
+        <li>One binary plus one SQLite file — backups are a file copy.</li>
+        <li>Admin dashboard and CLI speak the same audited API.</li>
+        <li>Per-variable versioning on every update.</li>
+        <li>Optional encryption at rest for stored values.</li>
+        <li>Structured JSON logs with request IDs for any log collector.</li>
+        <li>Cross-platform releases plus a multi-arch Docker image.</li>
+      </ul>
+    </section>
+
+    <section id="features">
+      <h2>What you can do</h2>
+      <p class="section-lead">Everything in the dashboard is also in the CLI — and everything is audited.</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div>
+            <h3>Organize by app and environment</h3>
+            <p>Applications contain environments, environments contain variables. The hierarchy matches how you deploy.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div>
+            <h3>Version every change</h3>
+            <p>Setting an existing key bumps its version counter, so updates are traceable without external tooling.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div>
+            <h3>Audit everything</h3>
+            <p>Mutations and logins land in an append-only trail with actor, IP, and request ID — in SQLite and on the log stream.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div>
+            <h3>Round-trip .env files</h3>
+            <p><code>var export</code> prints what <code>var import</code> (and your app) consumes. The dashboard imports uploads too.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div>
+            <h3>Collector-native logging</h3>
+            <p>JSON to stdout with levels and correlation IDs — Fluent Bit, Loki, and CloudWatch ingest it with stock parsers.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div>
+            <h3>Run it your way</h3>
+            <p>Local binaries, Docker image, or release assets. No account, no subscription, Apache 2.0 licensed.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="documentations">
+      <h2>Learn more</h2>
+      <div class="doc-links">
+        <a href="documentation.html">Documentation — Install, configure, and operate Envious</a>
+        <a href="downloads.html">Downloads — CLI binaries and the Docker image</a>
+        <a href="support.html">Support — Get help for production deployments</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-credit">Built by <a href="https://github.com/marcuwynu23">Mark Wayne Menorca</a> · Apache 2.0 Licensed</p>
+      <div class="footer-links">
+        <a href="https://github.com/marcuwynu23/envious">GitHub</a>
+        <a href="https://github.com/marcuwynu23/envious/releases">Releases</a>
+        <a href="support.html">Support</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="nav.js"></script>
+</body>
+
+</html>

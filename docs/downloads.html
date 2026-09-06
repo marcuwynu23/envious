@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Envious Downloads — CLI Binaries and Docker Image</title>
+  <meta name="description"
+    content="Download Envious: version-stamped CLI binaries for Linux, macOS, and Windows, plus the multi-arch server Docker image from GHCR." />
+  <meta name="author" content="Mark Wayne Menorca" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://marcuwynu23.github.io/envious/downloads.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Envious Downloads" />
+  <meta property="og:description" content="CLI binaries for every platform and the server Docker image." />
+  <meta property="og:url" content="https://marcuwynu23.github.io/envious/downloads.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="index.html" class="logo">Envious<span>.</span></a>
+      <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false"
+        aria-controls="nav-drawer">
+        <span class="nav-toggle__bar"></span>
+        <span class="nav-toggle__bar"></span>
+        <span class="nav-toggle__bar"></span>
+      </button>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="index.html#features">Features</a>
+        <a href="documentation.html">Documentation</a>
+        <a href="downloads.html" class="active">Downloads</a>
+        <a href="support.html">Support</a>
+      </nav>
+      <div class="nav-backdrop" id="nav-backdrop" aria-hidden="true"></div>
+      <div class="nav-drawer" id="nav-drawer" role="dialog" aria-label="Navigation menu" aria-hidden="true">
+        <ul class="nav-drawer__links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="documentation.html">Documentation</a></li>
+          <li><a href="downloads.html">Downloads</a></li>
+          <li><a href="support.html">Support</a></li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <main class="container-fluid">
+    <section id="releases">
+      <h2>Downloads</h2>
+      <p class="section-lead">Every version tag publishes tested, version-stamped artifacts. Start at
+        <a href="https://github.com/marcuwynu23/envious/releases">GitHub Releases</a>.</p>
+    </section>
+
+    <section id="cli">
+      <h2>CLI binaries</h2>
+      <p class="section-lead">No installation, no dependencies — download, run, done.</p>
+      <div class="table-wrap">
+        <table class="spec">
+          <tr><th>Asset</th><th>Platform</th></tr>
+          <tr><td><code>envious-linux-amd64</code></td><td>Linux x86_64</td></tr>
+          <tr><td><code>envious-linux-arm64</code></td><td>Linux ARM64 (Raspberry Pi, Graviton)</td></tr>
+          <tr><td><code>envious-darwin-amd64</code></td><td>macOS Intel</td></tr>
+          <tr><td><code>envious-darwin-arm64</code></td><td>macOS Apple Silicon</td></tr>
+          <tr><td><code>envious-windows-amd64.exe</code></td><td>Windows x86_64</td></tr>
+          <tr><td><code>checksums.txt</code></td><td>SHA-256 for every asset</td></tr>
+        </table>
+      </div>
+      <pre class="block"><code># Linux
+curl -L -o envious \
+  https://github.com/marcuwynu23/envious/releases/latest/download/envious-linux-amd64
+chmod +x envious</code></pre>
+      <pre class="block"><code># macOS (Apple Silicon; swap in envious-darwin-amd64 on Intel)
+curl -L -o envious \
+  https://github.com/marcuwynu23/envious/releases/latest/download/envious-darwin-arm64
+chmod +x envious</code></pre>
+      <pre class="block"><code># Windows (PowerShell)
+Invoke-WebRequest `
+  -Uri https://github.com/marcuwynu23/envious/releases/latest/download/envious-windows-amd64.exe `
+  -OutFile envious.exe</code></pre>
+    </section>
+
+    <section id="docker">
+      <h2>Server Docker image</h2>
+      <p class="section-lead">Multi-arch (<code>amd64</code> + <code>arm64</code>) image with the release tag baked in
+        (visible via <code>-version</code>, <code>/api/version</code>, and the dashboard).</p>
+      <pre class="block"><code>docker pull ghcr.io/marcuwynu23/envious-web:latest
+docker run -p 8080:8080 \
+  -e ENCRYPTION_KEY="..." \
+  -v envious-data:/data \
+  -e DATABASE_PATH=/data/envious.db \
+  ghcr.io/marcuwynu23/envious-web:latest</code></pre>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <pre class="block"><code>./envious --help
+./envious version   # must show the release tag, not "dev"</code></pre>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-credit">Built by <a href="https://github.com/marcuwynu23">Mark Wayne Menorca</a> · Apache 2.0 Licensed</p>
+      <div class="footer-links">
+        <a href="https://github.com/marcuwynu23/envious">GitHub</a>
+        <a href="https://github.com/marcuwynu23/envious/releases">Releases</a>
+        <a href="support.html">Support</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="nav.js"></script>
+</body>
+
+</html>
