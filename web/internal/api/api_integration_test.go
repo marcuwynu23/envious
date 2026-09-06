@@ -26,6 +26,7 @@ func newTestServer(t *testing.T) (*api.Server, string) {
 		t.Fatalf("init auth: %v", err)
 	}
 	srv := api.New(s, []byte("secret"))
+	t.Cleanup(func() { _ = s.Close() })
 	return srv, key
 }
 
@@ -41,5 +42,43 @@ func TestAPIEnvCRUD(t *testing.T) {
 	server.E.ServeHTTP(rec, req)
 	if rec.Code != 201 {
 		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAPIInvalidIDAndNotFound(t *testing.T) {
+	server, key := newTestServer(t)
+
+	cases := []struct {
+		name       string
+		method     string
+		target     string
+		wantStatus int
+	}{
+		{"get app trailing garbage", http.MethodGet, "/api/apps/12abc", 400},
+		{"get app zero", http.MethodGet, "/api/apps/0", 400},
+		{"get app negative", http.MethodGet, "/api/apps/-1", 400},
+		{"get missing app", http.MethodGet, "/api/apps/9999", 404},
+		{"delete missing app", http.MethodDelete, "/api/apps/9999", 404},
+		{"delete missing env", http.MethodDelete, "/api/envs/9999", 404},
+		{"delete missing var", http.MethodDelete, "/api/vars/9999", 404},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.target, nil)
+			req.Header.Set("X-API-Key", key)
+			rec := httptest.NewRecorder()
+			server.E.ServeHTTP(rec, req)
+			if rec.Code != tc.wantStatus {
+				t.Fatalf("%s %s = %d, want %d: %s", tc.method, tc.target, rec.Code, tc.wantStatus, rec.Body.String())
+			}
+		})
+	}
+
+	// Missing API key → 401.
+	req := httptest.NewRequest(http.MethodGet, "/api/apps", nil)
+	rec := httptest.NewRecorder()
+	server.E.ServeHTTP(rec, req)
+	if rec.Code != 401 {
+		t.Fatalf("missing key = %d, want 401", rec.Code)
 	}
 }

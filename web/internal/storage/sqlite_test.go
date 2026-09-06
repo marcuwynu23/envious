@@ -61,3 +61,20 @@ func TestEnvAndVarCRUD(t *testing.T) {
 		t.Fatalf("delete var: %v", err)
 	}
 }
+
+func TestDeleteNotFound(t *testing.T) {
+	cfg := tempCfg(t)
+	s, err := storage.Open(cfg)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer s.Close()
+	ctx := context.Background()
+
+	if err := s.DeleteApp(ctx, 9999); err != storage.ErrNotFound {
+		t.Fatalf("DeleteApp missing = %v, want ErrNotFound", err)
+	}
+	if err := s.DeleteEnv(ctx, 9999); err != storage.ErrNotFound {
+		t.Fatalf("DeleteEnv missing = %v, want ErrNotFound", err)
+	}
+}
