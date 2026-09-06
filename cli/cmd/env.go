@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 
-	"envious-cli/internal/client"
-	"envious-cli/internal/config"
 	"envious-cli/internal/view"
 	"github.com/spf13/cobra"
 )
@@ -31,8 +29,7 @@ func envListCmd() *cobra.Command {
 		Example: `  envious env list
   envious env list --app-id 2`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, _ := config.Load()
-			c, err := client.New(cfg.APIBase, cfg.APIKey)
+			c, err := loadClient()
 			if err != nil {
 				return err
 			}
@@ -74,8 +71,7 @@ func envCreateCmd() *cobra.Command {
 		Short: "Create environment",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, _ := config.Load()
-			c, err := client.New(cfg.APIBase, cfg.APIKey)
+			c, err := loadClient()
 			if err != nil {
 				return err
 			}
@@ -97,12 +93,11 @@ func envDeleteCmd() *cobra.Command {
 		Short: "Delete environment",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var id int64
-			if _, err := fmt.Sscan(args[0], &id); err != nil {
+			id, err := parseID(args[0])
+			if err != nil {
 				return err
 			}
-			cfg, _ := config.Load()
-			c, err := client.New(cfg.APIBase, cfg.APIKey)
+			c, err := loadClient()
 			if err != nil {
 				return err
 			}

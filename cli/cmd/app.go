@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 
-	"envious-cli/internal/client"
-	"envious-cli/internal/config"
 	"envious-cli/internal/view"
 	"github.com/spf13/cobra"
 )
@@ -29,8 +27,7 @@ func appListCmd() *cobra.Command {
 		Short: "List applications",
 		Example: `  envious app list`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, _ := config.Load()
-			c, err := client.New(cfg.APIBase, cfg.APIKey)
+			c, err := loadClient()
 			if err != nil {
 				return err
 			}
@@ -57,8 +54,7 @@ func appCreateCmd() *cobra.Command {
 		Short: "Create application",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, _ := config.Load()
-			c, err := client.New(cfg.APIBase, cfg.APIKey)
+			c, err := loadClient()
 			if err != nil {
 				return err
 			}
@@ -77,12 +73,11 @@ func appDeleteCmd() *cobra.Command {
 		Short: "Delete application",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var id int64
-			if _, err := fmt.Sscan(args[0], &id); err != nil {
+			id, err := parseID(args[0])
+			if err != nil {
 				return err
 			}
-			cfg, _ := config.Load()
-			c, err := client.New(cfg.APIBase, cfg.APIKey)
+			c, err := loadClient()
 			if err != nil {
 				return err
 			}

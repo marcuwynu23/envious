@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"envious-cli/internal/client"
-	"envious-cli/internal/config"
 	"envious-cli/internal/view"
 	"github.com/spf13/cobra"
 )
@@ -37,8 +37,8 @@ func resolveEnvID(
 		return explicitEnvID, nil
 	}
 	if strings.TrimSpace(argEnvID) != "" {
-		var envID int64
-		if _, err := fmt.Sscan(argEnvID, &envID); err != nil {
+		envID, err := parseID(argEnvID)
+		if err != nil {
 			return 0, err
 		}
 		return envID, nil
@@ -56,8 +56,10 @@ func resolveEnvID(
 			if matchID != 0 {
 				return 0, fmt.Errorf("environment name %q is ambiguous; use --app-id or --env-id", envName)
 			}
-			var id int64
-			_, _ = fmt.Sscan(fmt.Sprint(e["id"]), &id)
+			id, err := strconv.ParseInt(strings.TrimSpace(fmt.Sprint(e["id"])), 10, 64)
+			if err != nil || id <= 0 {
+				return 0, fmt.Errorf("invalid environment id %v", e["id"])
+			}
 			matchID = id
 		}
 	}
@@ -81,8 +83,8 @@ func resolveAppID(c *client.Client, explicitAppID int64, appName string) (int64,
 	}
 	for _, a := range apps {
 		if fmt.Sprint(a["name"]) == appName {
-			var id int64
-			if _, err := fmt.Sscan(fmt.Sprint(a["id"]), &id); err == nil && id > 0 {
+			id, err := strconv.ParseInt(strings.TrimSpace(fmt.Sprint(a["id"])), 10, 64)
+			if err == nil && id > 0 {
 				return id, nil
 			}
 		}
@@ -110,8 +112,7 @@ func varListCmd() *cobra.Command {
 			if len(args) == 1 {
 				argEnvID = args[0]
 			}
-			cfg, _ := config.Load()
-			c, err := client.New(cfg.APIBase, cfg.APIKey)
+			c, err := loadClient()
 			if err != nil {
 				return err
 			}
@@ -178,8 +179,7 @@ func varSetCmd() *cobra.Command {
 				key = args[0]
 				val = args[1]
 			}
-			cfg, _ := config.Load()
-			c, err := client.New(cfg.APIBase, cfg.APIKey)
+			c, err := loadClient()
 			if err != nil {
 				return err
 			}
@@ -211,12 +211,11 @@ func varDeleteCmd() *cobra.Command {
 		Short: "Delete a variable by ID",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var id int64
-			if _, err := fmt.Sscan(args[0], &id); err != nil {
+			id, err := parseID(args[0])
+			if err != nil {
 				return err
 			}
-			cfg, _ := config.Load()
-			c, err := client.New(cfg.APIBase, cfg.APIKey)
+			c, err := loadClient()
 			if err != nil {
 				return err
 			}
@@ -246,8 +245,7 @@ func varExportCmd() *cobra.Command {
 			if len(args) == 1 {
 				argEnvID = args[0]
 			}
-			cfg, _ := config.Load()
-			c, err := client.New(cfg.APIBase, cfg.APIKey)
+			c, err := loadClient()
 			if err != nil {
 				return err
 			}
@@ -300,8 +298,7 @@ func varImportCmd() *cobra.Command {
 				return err
 			}
 			defer f.Close()
-			cfg, _ := config.Load()
-			c, err := client.New(cfg.APIBase, cfg.APIKey)
+			c, err := loadClient()
 			if err != nil {
 				return err
 			}
@@ -314,16 +311,20 @@ func varImportCmd() *cobra.Command {
 				return err
 			}
 			sc := bufio.NewScanner(f)
+			sc.Buffer(make([]byte, 64*1024), 1024*1024)
 			for sc.Scan() {
-				line := sc.Text()
-				if len(line) == 0 || line[0] == '#' {
+				line := strings.TrimSpace(sc.Text())
+				if line == "" || strings.HasPrefix(line, "#") {
 					continue
 				}
 				var key, val string
 				if i := strings.IndexRune(line, '='); i > 0 {
-					key = line[:i]
+					key = strings.TrimSpace(line[:i])
 					val = line[i+1:]
 				} else {
+					continue
+				}
+				if key == "" {
 					continue
 				}
 				if _, err := c.SetVar(envID, key, val); err != nil {
