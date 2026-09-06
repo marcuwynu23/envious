@@ -2,6 +2,7 @@ package api
 
 import (
 	"bufio"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -17,11 +18,13 @@ import (
 	"strings"
 	"time"
 
+	"envious-web/internal/auth"
 	"envious-web/internal/middleware"
 	"envious-web/internal/storage"
 	"envious-web/internal/version"
 
 	"github.com/labstack/echo/v4"
+	echoMw "github.com/labstack/echo/v4/middleware"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -30,6 +33,38 @@ type Server struct {
 	Store   *storage.Storage
 	secret  []byte
 	Version string
+	// verifier caches the API-key hash; nil falls back to per-request verify.
+	verifier *auth.CachedVerifier
+}
+
+// Options tunes server behavior; zero values select safe defaults.
+type Options struct {
+	// Version is reported by /api/version and the dashboard.
+	Version string
+	// AuthTTL caches the API-key hash; <=0 disables the cache.
+	AuthTTL time.Duration
+	// RateRPS caps API requests per client IP; <=0 disables limiting.
+	RateRPS float64
+	RateBurst int
+}
+
+func New(store *storage.Storage, secret []byte, opts Options) *Server {
+	e := echo.New()
+	s := &Server{E: e, Store: store, secret: secret, Version: opts.Version}
+	if opts.AuthTTL != 0 {
+		s.verifier = auth.NewCachedVerifier(opts.AuthTTL)
+	}
+	// Middlewares
+	e.Use(middleware.RequestID())
+	e.Use(middleware.Logging())
+	e.Use(middleware.Recovery())
+	e.Use(echoMw.BodyLimit("1M"))
+	e.Use(middleware.RateLimit(opts.RateRPS, opts.RateBurst))
+	// Templates
+	e.Renderer = &TemplateRegistry{templates: template.Must(template.ParseFS(templatesFS, "templates/*.html"))}
+	// Routes
+	s.registerRoutes()
+	return s
 }
 
 // appVersion returns the stamped server version ("dev" when unset).
@@ -49,20 +84,6 @@ func (s *Server) render(c echo.Context, code int, name string, data map[string]a
 	return c.Render(code, name, data)
 }
 
-func New(store *storage.Storage, secret []byte) *Server {
-	e := echo.New()
-	s := &Server{E: e, Store: store, secret: secret}
-	// Middlewares
-	e.Use(middleware.RequestID())
-	e.Use(middleware.Logging())
-	e.Use(middleware.Recovery())
-	// Templates
-	e.Renderer = &TemplateRegistry{templates: template.Must(template.ParseFS(templatesFS, "templates/*.html"))}
-	// Routes
-	s.registerRoutes()
-	return s
-}
-
 func (s *Server) registerRoutes() {
 	e := s.E
 
@@ -78,6 +99,10 @@ func (s *Server) registerRoutes() {
 
 	// Public build info (no auth: version only, no secrets).
 	e.GET("/api/version", s.handleVersion)
+
+	// Liveness and readiness for load balancers / orchestrators.
+	e.GET("/healthz", s.handleHealth)
+	e.GET("/readyz", s.handleReady)
 
 	// Admin dashboard
 	e.GET("/", s.requireSession(s.handleAdminApps))
@@ -95,7 +120,7 @@ func (s *Server) registerRoutes() {
 
 	// API (header X-API-Key required)
 	api := e.Group("/api")
-	api.Use(middleware.APIKeyAuth(s.Store))
+	api.Use(middleware.APIKeyAuth(s.Store, s.verifier))
 	api.GET("/apps", s.handleListApps)
 	api.POST("/apps", s.handleCreateApp)
 	api.GET("/apps/:id", s.handleGetApp)
@@ -178,6 +203,21 @@ func (s *Server) audit(c echo.Context, actor, action, resourceType string, resou
 // Handlers
 func (s *Server) handleVersion(c echo.Context) error {
 	return c.JSON(200, map[string]string{"version": s.appVersion()})
+}
+
+// handleHealth is the liveness probe: always 200 when the process runs.
+func (s *Server) handleHealth(c echo.Context) error {
+	return c.JSON(200, map[string]string{"status": "ok"})
+}
+
+// handleReady is the readiness probe: 200 only when the database answers.
+func (s *Server) handleReady(c echo.Context) error {
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+	if err := s.Store.Ping(ctx); err != nil {
+		return c.JSON(503, map[string]string{"status": "unavailable"})
+	}
+	return c.JSON(200, map[string]string{"status": "ready", "dialect": s.Store.Dialect()})
 }
 
 // handleAdminAbout renders the About page. GitTag is resolved live on every
