@@ -30,6 +30,32 @@ func newTestServer(t *testing.T) (*api.Server, string) {
 	return srv, key
 }
 
+func TestAPIVersion(t *testing.T) {
+	server, _ := newTestServer(t)
+
+	// Unset version defaults to "dev" and needs no auth.
+	req := httptest.NewRequest(http.MethodGet, "/api/version", nil)
+	rec := httptest.NewRecorder()
+	server.E.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var unset map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&unset); err != nil || unset["version"] != "dev" {
+		t.Fatalf("expected default version dev, got %v (err %v)", unset, err)
+	}
+
+	// Stamped version is served as-is.
+	server.Version = "v1.0.0"
+	req = httptest.NewRequest(http.MethodGet, "/api/version", nil)
+	rec = httptest.NewRecorder()
+	server.E.ServeHTTP(rec, req)
+	var got map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil || got["version"] != "v1.0.0" {
+		t.Fatalf("expected version v1.0.0, got %v (err %v)", got, err)
+	}
+}
+
 func TestAPIEnvCRUD(t *testing.T) {
 	server, key := newTestServer(t)
 
