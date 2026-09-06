@@ -18,9 +18,21 @@ type Client struct {
 }
 
 func New(base, key string) (*Client, error) {
+	if base == "" {
+		return nil, fmt.Errorf("api base URL is required (run `envious login --api-base=...`)")
+	}
 	u, err := url.Parse(base)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid api base URL: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return nil, fmt.Errorf("invalid api base URL %q: scheme must be http or https", base)
+	}
+	if u.Host == "" {
+		return nil, fmt.Errorf("invalid api base URL %q: missing host", base)
+	}
+	if key == "" {
+		return nil, fmt.Errorf("api key is required (run `envious login --api-key=...`)")
 	}
 	return &Client{
 		Base:   u,
@@ -69,6 +81,30 @@ func (c *Client) Login(base, key string) {
 	c.APIKey = key
 }
 
+// errorForStatus reads a bounded error body so CLI errors preserve the
+// server's {"error": "..."} message instead of a bare status code.
+func errorForStatus(resp *http.Response) error {
+	const maxErrBody = 4 * 1024
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrBody))
+	var serverErr struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &serverErr); err == nil && serverErr.Error != "" {
+		return fmt.Errorf("request failed: status %d: %s", resp.StatusCode, serverErr.Error)
+	}
+	if msg := string(bytes.TrimSpace(body)); msg != "" {
+		return fmt.Errorf("request failed: status %d: %s", resp.StatusCode, msg)
+	}
+	return fmt.Errorf("request failed: status %d", resp.StatusCode)
+}
+
+func decodeJSON(resp *http.Response, out any) error {
+	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		return fmt.Errorf("decode response: %w", err)
+	}
+	return nil
+}
+
 func (c *Client) ListApps() ([]map[string]any, error) {
 	resp, err := c.do("GET", "/api/apps", nil)
 	if err != nil {
@@ -76,10 +112,13 @@ func (c *Client) ListApps() ([]map[string]any, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("status %d", resp.StatusCode)
+		return nil, errorForStatus(resp)
 	}
 	var out []map[string]any
-	return out, json.NewDecoder(resp.Body).Decode(&out)
+	if err := decodeJSON(resp, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *Client) CreateApp(name string) (map[string]any, error) {
@@ -89,10 +128,13 @@ func (c *Client) CreateApp(name string) (map[string]any, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 201 {
-		return nil, fmt.Errorf("status %d", resp.StatusCode)
+		return nil, errorForStatus(resp)
 	}
 	var out map[string]any
-	return out, json.NewDecoder(resp.Body).Decode(&out)
+	if err := decodeJSON(resp, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *Client) DeleteApp(id int64) error {
@@ -119,10 +161,13 @@ func (c *Client) ListEnvs(appID int64) ([]map[string]any, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("status %d", resp.StatusCode)
+		return nil, errorForStatus(resp)
 	}
 	var out []map[string]any
-	return out, json.NewDecoder(resp.Body).Decode(&out)
+	if err := decodeJSON(resp, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *Client) CreateEnv(appID int64, name string) (map[string]any, error) {
@@ -136,10 +181,13 @@ func (c *Client) CreateEnv(appID int64, name string) (map[string]any, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 201 {
-		return nil, fmt.Errorf("status %d", resp.StatusCode)
+		return nil, errorForStatus(resp)
 	}
 	var out map[string]any
-	return out, json.NewDecoder(resp.Body).Decode(&out)
+	if err := decodeJSON(resp, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *Client) DeleteEnv(id int64) error {
@@ -161,10 +209,13 @@ func (c *Client) ListVars(envID int64) ([]map[string]any, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("status %d", resp.StatusCode)
+		return nil, errorForStatus(resp)
 	}
 	var out []map[string]any
-	return out, json.NewDecoder(resp.Body).Decode(&out)
+	if err := decodeJSON(resp, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *Client) SetVar(envID int64, key, value string) (map[string]any, error) {
@@ -174,10 +225,13 @@ func (c *Client) SetVar(envID int64, key, value string) (map[string]any, error) 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 && resp.StatusCode != 201 {
-		return nil, fmt.Errorf("status %d", resp.StatusCode)
+		return nil, errorForStatus(resp)
 	}
 	var out map[string]any
-	return out, json.NewDecoder(resp.Body).Decode(&out)
+	if err := decodeJSON(resp, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *Client) DeleteVarByID(id int64) error {
