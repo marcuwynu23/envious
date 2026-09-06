@@ -82,7 +82,7 @@ Invoke-WebRequest `
   ghcr.io/marcuwynu23/envious-web:latest
 # first start prints: Envious initial API key (store it securely): &lt;KEY&gt;</code></pre>
       <h3>Option 3 — Build from source (contributors)</h3>
-      <p class="section-lead">Requires Go 1.21+ for the CLI and Go 1.23+ for the server.</p>
+      <p class="section-lead">Requires Go 1.21+ for the CLI and Go 1.25+ for the server.</p>
       <pre class="block"><code>cd cli &amp;&amp; go mod tidy &amp;&amp; go build -o envious .
 cd ../web &amp;&amp; go mod tidy &amp;&amp; go run ./cmd/server</code></pre>
     </section>
@@ -121,14 +121,21 @@ cd ../web &amp;&amp; go mod tidy &amp;&amp; go run ./cmd/server</code></pre>
 
     <section id="configuration">
       <h2>Server Configuration</h2>
+      <p class="section-lead">No config file — everything is an environment variable.
+        SQLite is the default backend; Postgres is optional (same API).
+        The full operator manual, including the enterprise setup, lives in
+        <a href="https://github.com/marcuwynu23/envious/blob/main/USER_GUIDE.md">USER_GUIDE.md</a>.</p>
       <div class="table-wrap">
         <table class="spec">
           <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
           <tr><td><code>PORT</code></td><td><code>8080</code></td><td>TCP port</td></tr>
           <tr><td><code>DATABASE_PATH</code></td><td><code>./envious.db</code></td><td>SQLite file — back this up</td></tr>
-          <tr><td><code>ENCRYPTION_KEY</code></td><td>—</td><td>Enables value encryption at rest; also signs dashboard sessions. Always set in production.</td></tr>
+          <tr><td><code>DB_DRIVER</code></td><td><code>sqlite</code></td><td><code>sqlite</code> or <code>postgres</code></td></tr>
+          <tr><td><code>DATABASE_URL</code></td><td>—</td><td>Postgres URL (only when <code>DB_DRIVER=postgres</code>)</td></tr>
+          <tr><td><code>ENCRYPTION_KEY</code></td><td>—</td><td>Value encryption at rest + session signing. Always set in production.</td></tr>
           <tr><td><code>LOG_LEVEL</code></td><td><code>info</code></td><td><code>debug</code> | <code>info</code> | <code>warn</code> | <code>error</code></td></tr>
           <tr><td><code>LOG_FORMAT</code></td><td><code>json</code></td><td><code>json</code> for collectors, <code>text</code> for local dev</td></tr>
+          <tr><td><code>RATE_LIMIT_RPS</code> / <code>RATE_LIMIT_BURST</code></td><td><code>20</code> / <code>40</code></td><td>Per-IP API throttle (<code>0</code> disables)</td></tr>
         </table>
       </div>
     </section>
