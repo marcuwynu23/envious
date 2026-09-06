@@ -40,8 +40,17 @@ func main() {
 	_ = godotenv.Load()
 	cfg := config.Load()
 
-	// Structured logger
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}))
+	// Structured logger: JSON to stdout by default so generic collectors
+	// (Fluent Bit, Loki, CloudWatch, …) can ingest it without an agent.
+	// LOG_FORMAT=text selects the human-readable handler for local dev.
+	opts := &slog.HandlerOptions{Level: cfg.Level()}
+	var handler slog.Handler
+	if cfg.LogFormat == "text" {
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	} else {
+		handler = slog.NewJSONHandler(os.Stdout, opts)
+	}
+	logger := slog.New(handler)
 	slog.SetDefault(logger)
 
 	store, err := storage.Open(cfg)
