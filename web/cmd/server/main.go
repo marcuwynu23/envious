@@ -26,6 +26,12 @@ import (
 func main() {
 	showVersion := flag.Bool("version", false, "print version information and exit")
 	flag.Parse()
+	// Unstamped dev builds report the live git tag instead of "dev".
+	if version.Version == "dev" {
+		if d := version.Describe(); d != "" {
+			version.Version = d
+		}
+	}
 	if *showVersion {
 		info := version.Current()
 		fmt.Printf("envious-server version %s (commit %s, built %s)\n", info.Version, info.Commit, info.BuildDate)
