@@ -78,3 +78,52 @@ func TestDeleteNotFound(t *testing.T) {
 		t.Fatalf("DeleteEnv missing = %v, want ErrNotFound", err)
 	}
 }
+
+func TestActivityLog(t *testing.T) {
+	cfg := tempCfg(t)
+	s, err := storage.Open(cfg)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer s.Close()
+	ctx := context.Background()
+
+	// Empty trail reads as empty, not an error.
+	acts, err := s.ListActivity(ctx, "", 0)
+	if err != nil {
+		t.Fatalf("list empty: %v", err)
+	}
+	if len(acts) != 0 {
+		t.Fatalf("expected no entries, got %d", len(acts))
+	}
+
+	if err := s.LogActivity(ctx, "admin", "app.create", "app", 2, "name=myapp", "127.0.0.1", "req-1"); err != nil {
+		t.Fatalf("log 1: %v", err)
+	}
+	if err := s.LogActivity(ctx, "admin", "var.set", "var", 7, "env=3 key=FOO", "127.0.0.1", "req-2"); err != nil {
+		t.Fatalf("log 2: %v", err)
+	}
+
+	acts, err = s.ListActivity(ctx, "", 0)
+	if err != nil {
+		t.Fatalf("list all: %v", err)
+	}
+	if len(acts) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(acts))
+	}
+	if acts[0].Action != "var.set" {
+		t.Fatalf("newest first: got %q", acts[0].Action)
+	}
+	if acts[1].Actor != "admin" || acts[1].ResourceID != 2 || acts[1].Detail != "name=myapp" {
+		t.Fatalf("unexpected entry: %+v", acts[1])
+	}
+
+	filtered, err := s.ListActivity(ctx, "app.create", 10)
+	if err != nil || len(filtered) != 1 {
+		t.Fatalf("filter app.create: %v entries %d", err, len(filtered))
+	}
+	limited, err := s.ListActivity(ctx, "", 1)
+	if err != nil || len(limited) != 1 {
+		t.Fatalf("limit 1: %v entries %d", err, len(limited))
+	}
+}

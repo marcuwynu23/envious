@@ -101,6 +101,49 @@ func TestAdminAbout(t *testing.T) {
 	}
 }
 
+func TestAPIActivityAudit(t *testing.T) {
+	server, key := newTestServer(t)
+
+	// Mutate through the API.
+	body, _ := json.Marshal(map[string]string{"name": "audited"})
+	req := httptest.NewRequest(http.MethodPost, "/api/apps", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", key)
+	req.Header.Set("X-Request-ID", "test-req-1")
+	rec := httptest.NewRecorder()
+	server.E.ServeHTTP(rec, req)
+	if rec.Code != 201 {
+		t.Fatalf("create app = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// The audit trail records it (actor + metadata, never values).
+	req = httptest.NewRequest(http.MethodGet, "/api/activity?action=app.create", nil)
+	req.Header.Set("X-API-Key", key)
+	rec = httptest.NewRecorder()
+	server.E.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("activity = %d: %s", rec.Code, rec.Body.String())
+	}
+	var acts []map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&acts); err != nil || len(acts) != 1 {
+		t.Fatalf("expected 1 entry, got %v (err %v)", acts, err)
+	}
+	if acts[0]["actor"] != "admin" || acts[0]["action"] != "app.create" {
+		t.Fatalf("unexpected entry: %v", acts[0])
+	}
+	if acts[0]["request_id"] != "test-req-1" {
+		t.Fatalf("request id not propagated: %v", acts[0])
+	}
+
+	// Activity endpoint itself requires auth.
+	req = httptest.NewRequest(http.MethodGet, "/api/activity", nil)
+	rec = httptest.NewRecorder()
+	server.E.ServeHTTP(rec, req)
+	if rec.Code != 401 {
+		t.Fatalf("anonymous activity = %d, want 401", rec.Code)
+	}
+}
+
 func TestAPIEnvCRUD(t *testing.T) {
 	server, key := newTestServer(t)
 
