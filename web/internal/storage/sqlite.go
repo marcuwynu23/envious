@@ -10,16 +10,27 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"envious-web/internal/config"
 	"envious-web/internal/env"
 
+	"github.com/jackc/pgx/v5/pgconn"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "modernc.org/sqlite"
+)
+
+const (
+	// DialectSQLite is the embedded single-file backend (default).
+	DialectSQLite = "sqlite"
+	// DialectPostgres is the server-based backend for multi-instance use.
+	DialectPostgres = "postgres"
 )
 
 type Storage struct {
 	db            *sql.DB
+	dialect       string
 	encryptionKey []byte
 }
 
@@ -29,19 +40,51 @@ var (
 )
 
 func Open(cfg *config.Config) (*Storage, error) {
+	switch cfg.Driver {
+	case "", DialectSQLite:
+		return openSQLite(cfg)
+	case DialectPostgres:
+		return openPostgres(cfg)
+	default:
+		return nil, fmt.Errorf("unsupported DB_DRIVER %q: want sqlite or postgres", cfg.Driver)
+	}
+}
+
+func poolOf(cfg *config.Config, defOpen, defIdle int) (int, int) {
+	maxOpen, maxIdle := defOpen, defIdle
+	if cfg.DBMaxOpenConns > 0 {
+		maxOpen = cfg.DBMaxOpenConns
+	}
+	if cfg.DBMaxIdleConns > 0 {
+		maxIdle = cfg.DBMaxIdleConns
+	}
+	return maxOpen, maxIdle
+}
+
+func openSQLite(cfg *config.Config) (*Storage, error) {
 	db, err := sql.Open("sqlite", cfg.DBPath)
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(10)
+	maxOpen, maxIdle := poolOf(cfg, 10, 10)
+	db.SetMaxOpenConns(maxOpen)
+	db.SetMaxIdleConns(maxIdle)
 	db.SetConnMaxLifetime(5 * time.Minute)
-	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		_ = db.Close()
-		return nil, err
+	// WAL lets readers run concurrently with the single writer; busy_timeout
+	// turns lock contention into waits instead of instant SQLITE_BUSY errors.
+	for _, pragma := range []string{
+		"PRAGMA foreign_keys = ON",
+		"PRAGMA journal_mode = WAL",
+		"PRAGMA busy_timeout = 5000",
+		"PRAGMA synchronous = NORMAL",
+	} {
+		if _, err := db.Exec(pragma); err != nil {
+			_ = db.Close()
+			return nil, fmt.Errorf("%s: %w", pragma, err)
+		}
 	}
 
-	s := &Storage{db: db, encryptionKey: cfg.EncryptionKey}
+	s := &Storage{db: db, dialect: DialectSQLite, encryptionKey: cfg.EncryptionKey}
 	if err := s.migrate(); err != nil {
 		_ = db.Close()
 		return nil, err
@@ -49,9 +92,207 @@ func Open(cfg *config.Config) (*Storage, error) {
 	return s, nil
 }
 
+func openPostgres(cfg *config.Config) (*Storage, error) {
+	if strings.TrimSpace(cfg.DatabaseURL) == "" {
+		return nil, fmt.Errorf("DATABASE_URL is required when DB_DRIVER=postgres")
+	}
+	db, err := sql.Open("pgx", cfg.DatabaseURL)
+	if err != nil {
+		return nil, err
+	}
+	maxOpen, maxIdle := poolOf(cfg, 25, 5)
+	db.SetMaxOpenConns(maxOpen)
+	db.SetMaxIdleConns(maxIdle)
+	db.SetConnMaxLifetime(5 * time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("postgres ping: %w", err)
+	}
+
+	s := &Storage{db: db, dialect: DialectPostgres, encryptionKey: cfg.EncryptionKey}
+	if err := s.migrate(); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	// Repair the applications sequence on every open: rows inserted with an
+	// explicit id (e.g. the id=1 default app, or databases migrated before
+	// the sequence fix) don't advance BIGSERIAL, which would surface as
+	// phantom duplicate-key errors on the next CreateApp.
+	if _, err := s.db.Exec(`SELECT setval(pg_get_serial_sequence('applications', 'id'), COALESCE((SELECT MAX(id) FROM applications), 1))`); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("sequence repair: %w", err)
+	}
+	return s, nil
+}
+
+// Dialect reports the active backend ("sqlite" or "postgres").
+func (s *Storage) Dialect() string { return s.dialect }
+
+// rebind converts ? placeholders to $1..$n for Postgres; SQLite passes through.
+func (s *Storage) rebind(query string) string {
+	if s.dialect != DialectPostgres {
+		return query
+	}
+	var b strings.Builder
+	n := 0
+	for i := 0; i < len(query); i++ {
+		if query[i] == '?' {
+			n++
+			b.WriteString("$" + itoa(n))
+		} else {
+			b.WriteByte(query[i])
+		}
+	}
+	return b.String()
+}
+
+func itoa(n int) string { return fmt.Sprintf("%d", n) }
+
+func (s *Storage) exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return s.db.ExecContext(ctx, s.rebind(query), args...)
+}
+
+func (s *Storage) query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	return s.db.QueryContext(ctx, s.rebind(query), args...)
+}
+
+func (s *Storage) queryRow(ctx context.Context, query string, args ...any) *sql.Row {
+	return s.db.QueryRowContext(ctx, s.rebind(query), args...)
+}
+
+// insertID runs an INSERT and returns the new row id (RETURNING on Postgres,
+// LastInsertId on SQLite).
+func (s *Storage) insertID(ctx context.Context, query string, args ...any) (int64, error) {
+	if s.dialect == DialectPostgres {
+		var id int64
+		if err := s.queryRow(ctx, query+" RETURNING id", args...).Scan(&id); err != nil {
+			return 0, err
+		}
+		return id, nil
+	}
+	res, err := s.exec(ctx, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+func (s *Storage) insertIDTx(ctx context.Context, tx *sql.Tx, query string, args ...any) (int64, error) {
+	if s.dialect == DialectPostgres {
+		var id int64
+		rebound, params := rebindWithArgs(query+" RETURNING id", args)
+		if err := tx.QueryRowContext(ctx, rebound, params...).Scan(&id); err != nil {
+			return 0, err
+		}
+		return id, nil
+	}
+	res, err := tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+// rebindWithArgs is the static variant used inside transactions.
+func rebindWithArgs(query string, args []any) (string, []any) {
+	var b strings.Builder
+	n := 0
+	for i := 0; i < len(query); i++ {
+		if query[i] == '?' {
+			n++
+			b.WriteString("$" + itoa(n))
+		} else {
+			b.WriteByte(query[i])
+		}
+	}
+	return b.String(), args
+}
+
+// nowUTC stamps created/updated columns in a dialect-neutral RFC3339 format.
+func nowUTC() string { return time.Now().UTC().Format(time.RFC3339Nano) }
+
 func (s *Storage) Close() error { return s.db.Close() }
 
+// Ping reports database reachability (readiness probes).
+func (s *Storage) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
+
 func (s *Storage) migrate() error {
+	if s.dialect == DialectPostgres {
+		return s.migratePostgres()
+	}
+	return s.migrateSQLite()
+}
+
+// migratePostgres creates fresh tables. Timestamps are TEXT filled by the
+// app (RFC3339) so reads behave identically across backends.
+func (s *Storage) migratePostgres() error {
+	tables := []string{
+		`CREATE TABLE IF NOT EXISTS applications (
+			id BIGSERIAL PRIMARY KEY,
+			name TEXT NOT NULL UNIQUE,
+			created_at TEXT NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS api_key (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			hash TEXT NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS environments (
+			id BIGSERIAL PRIMARY KEY,
+			app_id BIGINT NOT NULL,
+			name TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			UNIQUE(app_id, name),
+			FOREIGN KEY(app_id) REFERENCES applications(id) ON DELETE CASCADE
+		)`,
+		`CREATE TABLE IF NOT EXISTS variables (
+			id BIGSERIAL PRIMARY KEY,
+			env_id BIGINT NOT NULL,
+			key TEXT NOT NULL,
+			value_encrypted TEXT NOT NULL,
+			version BIGINT NOT NULL DEFAULT 1,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			UNIQUE (env_id, key),
+			FOREIGN KEY(env_id) REFERENCES environments(id) ON DELETE CASCADE
+		)`,
+		`CREATE TABLE IF NOT EXISTS variable_versions (
+			id BIGSERIAL PRIMARY KEY,
+			var_id BIGINT NOT NULL,
+			env_id BIGINT NOT NULL,
+			key TEXT NOT NULL,
+			value_encrypted TEXT NOT NULL,
+			version BIGINT NOT NULL,
+			created_at TEXT NOT NULL,
+			FOREIGN KEY(var_id) REFERENCES variables(id) ON DELETE CASCADE
+		)`,
+		`CREATE TABLE IF NOT EXISTS activity_logs (
+			id BIGSERIAL PRIMARY KEY,
+			created_at TEXT NOT NULL,
+			actor TEXT NOT NULL,
+			action TEXT NOT NULL,
+			resource_type TEXT NOT NULL DEFAULT '',
+			resource_id BIGINT NOT NULL DEFAULT 0,
+			detail TEXT NOT NULL DEFAULT '',
+			ip TEXT NOT NULL DEFAULT '',
+			request_id TEXT NOT NULL DEFAULT ''
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action)`,
+		`CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at)`,
+	}
+	for _, stmt := range tables {
+		if _, err := s.db.Exec(stmt); err != nil {
+			return err
+		}
+	}
+	if err := s.ensureDefaultApp(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Storage) migrateSQLite() error {
 	if _, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS applications (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,10 +370,10 @@ func (s *Storage) migrate() error {
 }
 
 func (s *Storage) ensureDefaultApp() error {
-	_, err := s.db.Exec(`
-		INSERT INTO applications (id, name) VALUES (1, 'default')
+	_, err := s.db.Exec(s.rebind(`
+		INSERT INTO applications (id, name, created_at) VALUES (1, 'default', ?)
 		ON CONFLICT(id) DO NOTHING
-	`)
+	`), nowUTC())
 	return err
 }
 
@@ -267,7 +508,7 @@ func (s *Storage) tableHasColumn(table, col string) (bool, error) {
 // API key storage
 func (s *Storage) GetAPIKeyHash(ctx context.Context) (string, error) {
 	var hash string
-	err := s.db.QueryRowContext(ctx, "SELECT hash FROM api_key WHERE id = 1").Scan(&hash)
+	err := s.queryRow(ctx, "SELECT hash FROM api_key WHERE id = 1").Scan(&hash)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", ErrNotFound
 	}
@@ -275,7 +516,7 @@ func (s *Storage) GetAPIKeyHash(ctx context.Context) (string, error) {
 }
 
 func (s *Storage) SetAPIKeyHash(ctx context.Context, hash string) error {
-	_, err := s.db.ExecContext(ctx, `
+	_, err := s.exec(ctx, `
 		INSERT INTO api_key (id, hash) VALUES (1, ?) 
 		ON CONFLICT(id) DO UPDATE SET hash=excluded.hash
 	`, hash)
@@ -284,18 +525,18 @@ func (s *Storage) SetAPIKeyHash(ctx context.Context, hash string) error {
 
 // Applications
 func (s *Storage) CreateApp(ctx context.Context, name string) (int64, error) {
-	res, err := s.db.ExecContext(ctx, "INSERT INTO applications (name) VALUES (?)", name)
+	id, err := s.insertID(ctx, "INSERT INTO applications (name, created_at) VALUES (?, ?)", name, nowUTC())
 	if err != nil {
 		if isUniqueConstraint(err) {
 			return 0, ErrDuplicateKey
 		}
 		return 0, err
 	}
-	return res.LastInsertId()
+	return id, nil
 }
 
 func (s *Storage) ListApps(ctx context.Context) ([]env.Application, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, name, created_at FROM applications ORDER BY id ASC")
+	rows, err := s.query(ctx, "SELECT id, name, created_at FROM applications ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +558,7 @@ func (s *Storage) ListApps(ctx context.Context) ([]env.Application, error) {
 func (s *Storage) GetApp(ctx context.Context, id int64) (*env.Application, error) {
 	var a env.Application
 	var created string
-	err := s.db.QueryRowContext(ctx, "SELECT id, name, created_at FROM applications WHERE id = ?", id).
+	err := s.queryRow(ctx, "SELECT id, name, created_at FROM applications WHERE id = ?", id).
 		Scan(&a.ID, &a.Name, &created)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -334,7 +575,7 @@ func (s *Storage) DeleteApp(ctx context.Context, id int64) error {
 	if id == 1 {
 		return fmt.Errorf("cannot delete default application")
 	}
-	res, err := s.db.ExecContext(ctx, "DELETE FROM applications WHERE id = ?", id)
+	res, err := s.exec(ctx, "DELETE FROM applications WHERE id = ?", id)
 	if err != nil {
 		return err
 	}
@@ -353,14 +594,14 @@ func (s *Storage) CreateEnv(ctx context.Context, appID int64, name string) (int6
 	if appID == 0 {
 		appID = 1
 	}
-	res, err := s.db.ExecContext(ctx, "INSERT INTO environments (app_id, name) VALUES (?, ?)", appID, name)
+	id, err := s.insertID(ctx, "INSERT INTO environments (app_id, name, created_at) VALUES (?, ?, ?)", appID, name, nowUTC())
 	if err != nil {
 		if isUniqueConstraint(err) {
 			return 0, ErrDuplicateKey
 		}
 		return 0, err
 	}
-	return res.LastInsertId()
+	return id, nil
 }
 
 func (s *Storage) ListEnvs(ctx context.Context, appID int64) ([]env.Environment, error) {
@@ -369,9 +610,9 @@ func (s *Storage) ListEnvs(ctx context.Context, appID int64) ([]env.Environment,
 		err  error
 	)
 	if appID == 0 {
-		rows, err = s.db.QueryContext(ctx, "SELECT id, app_id, name, created_at FROM environments ORDER BY app_id ASC, id ASC")
+		rows, err = s.query(ctx, "SELECT id, app_id, name, created_at FROM environments ORDER BY app_id ASC, id ASC")
 	} else {
-		rows, err = s.db.QueryContext(ctx, "SELECT id, app_id, name, created_at FROM environments WHERE app_id = ? ORDER BY id ASC", appID)
+		rows, err = s.query(ctx, "SELECT id, app_id, name, created_at FROM environments WHERE app_id = ? ORDER BY id ASC", appID)
 	}
 	if err != nil {
 		return nil, err
@@ -394,7 +635,7 @@ func (s *Storage) ListEnvs(ctx context.Context, appID int64) ([]env.Environment,
 func (s *Storage) GetEnv(ctx context.Context, id int64) (*env.Environment, error) {
 	var e env.Environment
 	var created string
-	err := s.db.QueryRowContext(ctx, "SELECT id, app_id, name, created_at FROM environments WHERE id = ?", id).
+	err := s.queryRow(ctx, "SELECT id, app_id, name, created_at FROM environments WHERE id = ?", id).
 		Scan(&e.ID, &e.AppID, &e.Name, &created)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -408,7 +649,7 @@ func (s *Storage) GetEnv(ctx context.Context, id int64) (*env.Environment, error
 }
 
 func (s *Storage) DeleteEnv(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx, "DELETE FROM environments WHERE id = ?", id)
+	res, err := s.exec(ctx, "DELETE FROM environments WHERE id = ?", id)
 	if err != nil {
 		return err
 	}
@@ -424,7 +665,7 @@ func (s *Storage) DeleteEnv(ctx context.Context, id int64) error {
 
 // Variables
 func (s *Storage) ListVars(ctx context.Context, envID int64) ([]env.Variable, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.query(ctx, `
 		SELECT id, env_id, key, value_encrypted, version, created_at, updated_at
 		FROM variables WHERE env_id = ? ORDER BY key ASC
 	`, envID)
@@ -454,7 +695,7 @@ func (s *Storage) ListVars(ctx context.Context, envID int64) ([]env.Variable, er
 
 func (s *Storage) CountVars(ctx context.Context, envID int64) (int64, error) {
 	var n int64
-	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM variables WHERE env_id = ?`, envID).Scan(&n)
+	err := s.queryRow(ctx, `SELECT COUNT(*) FROM variables WHERE env_id = ?`, envID).Scan(&n)
 	return n, err
 }
 
@@ -465,7 +706,7 @@ func (s *Storage) ListVarsPage(ctx context.Context, envID int64, limit, offset i
 	if offset < 0 {
 		offset = 0
 	}
-	rows, err := s.db.QueryContext(ctx, `
+	rows, err := s.query(ctx, `
 		SELECT id, env_id, key, value_encrypted, version, created_at, updated_at
 		FROM variables
 		WHERE env_id = ?
@@ -499,7 +740,7 @@ func (s *Storage) ListVarsPage(ctx context.Context, envID int64, limit, offset i
 func (s *Storage) GetVar(ctx context.Context, envID int64, key string) (*env.Variable, error) {
 	var v env.Variable
 	var enc, created, updated string
-	err := s.db.QueryRowContext(ctx, `
+	err := s.queryRow(ctx, `
 		SELECT id, env_id, key, value_encrypted, version, created_at, updated_at
 		FROM variables WHERE env_id = ? AND key = ?
 	`, envID, key).Scan(&v.ID, &v.EnvID, &v.Key, &enc, &v.Version, &created, &updated)
@@ -520,6 +761,52 @@ func (s *Storage) GetVar(ctx context.Context, envID int64, key string) (*env.Var
 }
 
 func (s *Storage) SetVar(ctx context.Context, envID int64, key, value string) (*env.Variable, error) {
+	// Concurrent writers on the same key collide (SQLITE_BUSY on SQLite,
+	// 40001 serialization failures on Postgres, or a lost insert race).
+	// Retry with backoff so bursts serialize instead of 500ing.
+	var err error
+	for attempt := 0; attempt < 10; attempt++ {
+		var v *env.Variable
+		v, err = s.setVarOnce(ctx, envID, key, value)
+		if err == nil {
+			return v, nil
+		}
+		if err != ErrDuplicateKey && !isRetriable(err) {
+			return nil, err
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, ctxErr
+		}
+		time.Sleep(retryBackoff(attempt))
+	}
+	return nil, err
+}
+
+// retryBackoff grows quadratically with jitter to spread colliding writers.
+func retryBackoff(attempt int) time.Duration {
+	d := time.Duration(attempt*attempt)*5*time.Millisecond + 5*time.Millisecond
+	if d > 200*time.Millisecond {
+		d = 200 * time.Millisecond
+	}
+	return d
+}
+
+// isRetriable reports transient write-conflict errors worth retrying.
+func isRetriable(err error) bool {
+	if err == nil {
+		return false
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "40001" || pgErr.Code == "40P01"
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "SQLITE_BUSY") ||
+		strings.Contains(msg, "database is locked") ||
+		strings.Contains(msg, "database table is locked")
+}
+
+func (s *Storage) setVarOnce(ctx context.Context, envID int64, key, value string) (*env.Variable, error) {
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	enc, err := s.encrypt(value)
 	if err != nil {
@@ -534,9 +821,9 @@ func (s *Storage) SetVar(ctx context.Context, envID int64, key, value string) (*
 	}()
 	// Try update existing
 	var id, version int64
-	err = tx.QueryRow("SELECT id, version FROM variables WHERE env_id = ? AND key = ?", envID, key).Scan(&id, &version)
+	err = s.txQueryRow(tx, "SELECT id, version FROM variables WHERE env_id = ? AND key = ?", envID, key).Scan(&id, &version)
 	if errors.Is(err, sql.ErrNoRows) {
-		res, err := tx.Exec(`
+		newID, err := s.insertIDTx(ctx, tx, `
 			INSERT INTO variables (env_id, key, value_encrypted, version, created_at, updated_at)
 			VALUES (?, ?, ?, 1, ?, ?)
 		`, envID, key, enc, now, now)
@@ -546,8 +833,7 @@ func (s *Storage) SetVar(ctx context.Context, envID int64, key, value string) (*
 			}
 			return nil, err
 		}
-		newID, _ := res.LastInsertId()
-		if _, err := tx.Exec(`
+		if _, err := s.txExec(ctx, tx, `
 			INSERT INTO variable_versions (var_id, env_id, key, value_encrypted, version, created_at)
 			VALUES (?, ?, ?, ?, 1, ?)
 		`, newID, envID, key, enc, now); err != nil {
@@ -562,12 +848,12 @@ func (s *Storage) SetVar(ctx context.Context, envID int64, key, value string) (*
 		return nil, err
 	}
 	newVersion := version + 1
-	if _, err := tx.Exec(`
+	if _, err := s.txExec(ctx, tx, `
 		UPDATE variables SET value_encrypted = ?, version = ?, updated_at = ? WHERE id = ?
 	`, enc, newVersion, now, id); err != nil {
 		return nil, err
 	}
-	if _, err := tx.Exec(`
+	if _, err := s.txExec(ctx, tx, `
 		INSERT INTO variable_versions (var_id, env_id, key, value_encrypted, version, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`, id, envID, key, enc, newVersion, now); err != nil {
@@ -579,11 +865,20 @@ func (s *Storage) SetVar(ctx context.Context, envID int64, key, value string) (*
 	return &env.Variable{ID: id, EnvID: envID, Key: key, Value: value, Version: newVersion}, nil
 }
 
+// txQueryRow / txExec mirror queryRow/exec inside a transaction.
+func (s *Storage) txQueryRow(tx *sql.Tx, query string, args ...any) *sql.Row {
+	return tx.QueryRow(s.rebind(query), args...)
+}
+
+func (s *Storage) txExec(ctx context.Context, tx *sql.Tx, query string, args ...any) (sql.Result, error) {
+	return tx.ExecContext(ctx, s.rebind(query), args...)
+}
+
 func (s *Storage) UpdateVar(ctx context.Context, varID int64, value string) (*env.Variable, error) {
 	// Fetch existing
 	var envID int64
 	var key string
-	err := s.db.QueryRowContext(ctx, "SELECT env_id, key FROM variables WHERE id = ?", varID).Scan(&envID, &key)
+	err := s.queryRow(ctx, "SELECT env_id, key FROM variables WHERE id = ?", varID).Scan(&envID, &key)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -594,14 +889,14 @@ func (s *Storage) UpdateVar(ctx context.Context, varID int64, value string) (*en
 }
 
 func (s *Storage) DeleteVar(ctx context.Context, envID int64, key string) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM variables WHERE env_id = ? AND key = ?", envID, key)
+	_, err := s.exec(ctx, "DELETE FROM variables WHERE env_id = ? AND key = ?", envID, key)
 	return err
 }
 
 func (s *Storage) GetVarMetaByID(ctx context.Context, id int64) (int64, string, error) {
 	var envID int64
 	var key string
-	err := s.db.QueryRowContext(ctx, "SELECT env_id, key FROM variables WHERE id = ?", id).Scan(&envID, &key)
+	err := s.queryRow(ctx, "SELECT env_id, key FROM variables WHERE id = ?", id).Scan(&envID, &key)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, "", ErrNotFound
 	}
@@ -664,8 +959,16 @@ func normalizeKey(k []byte) []byte {
 }
 
 func isUniqueConstraint(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Postgres unique violation.
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return true
+	}
 	// modernc.org/sqlite uses "constraint failed" text for unique violations
-	return err != nil && contains(err.Error(), "UNIQUE constraint failed")
+	return contains(err.Error(), "UNIQUE constraint failed")
 }
 
 func contains(s, sub string) bool {
@@ -701,10 +1004,10 @@ type Activity struct {
 
 // LogActivity appends an audit-trail entry.
 func (s *Storage) LogActivity(ctx context.Context, actor, action, resourceType string, resourceID int64, detail, ip, requestID string) error {
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO activity_logs (actor, action, resource_type, resource_id, detail, ip, request_id)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		actor, action, resourceType, resourceID, detail, ip, requestID)
+	_, err := s.exec(ctx,
+		`INSERT INTO activity_logs (created_at, actor, action, resource_type, resource_id, detail, ip, request_id)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		nowUTC(), actor, action, resourceType, resourceID, detail, ip, requestID)
 	return err
 }
 
@@ -722,11 +1025,11 @@ func (s *Storage) ListActivity(ctx context.Context, action string, limit int) ([
 		err  error
 	)
 	if action == "" {
-		rows, err = s.db.QueryContext(ctx,
+		rows, err = s.query(ctx,
 			`SELECT id, created_at, actor, action, resource_type, resource_id, detail, ip, request_id
 			 FROM activity_logs ORDER BY id DESC LIMIT ?`, limit)
 	} else {
-		rows, err = s.db.QueryContext(ctx,
+		rows, err = s.query(ctx,
 			`SELECT id, created_at, actor, action, resource_type, resource_id, detail, ip, request_id
 			 FROM activity_logs WHERE action = ? ORDER BY id DESC LIMIT ?`, action, limit)
 	}
