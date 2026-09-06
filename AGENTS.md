@@ -53,7 +53,7 @@ Every task — bugfix, feature, refactor — follows this closed loop. Do not sk
 1. OBSERVE → 2. PLAN → 3. IMPLEMENT → 4. VERIFY → 5. REFLECT
 ```
 
-1. **OBSERVE** — Read before writing. Inspect `README.md`, relevant `cmd/` / `internal/` files, existing tests, `git log --oneline -10`, `git status`. Confirm which module(s) are affected (`web`, `cli`, or both).
+1. **OBSERVE** — Read before writing. Inspect `README.md`, relevant `cmd/` / `internal/` files, existing tests, `git log --oneline -10`, `git status`. Check open GitHub issues first (`gh issue list --state open`, then `gh issue view <n>` for any matching issue) for prior context, decisions, and scope before resolving an issue. Confirm which module(s) are affected (`web`, `cli`, or both).
 2. **PLAN** — State: scope, files to touch, design pattern to apply, test cases to add. Keep scope focused; unrelated refactors are rejected. For >3 steps, track with a todo list.
 3. **IMPLEMENT** — Smallest diff that solves the problem. Match surrounding style. Follow Sections 4–7.
 4. **VERIFY** — Format + vet + build + **run full test suite for every touched module** (Section 5). Never claim "done" without executed test output.
@@ -192,6 +192,7 @@ History already follows this — keep it. Format: `<type>(<scope>): <subject>` (
 - **No destructive commands:** no `git push --force`, `git reset --hard`, `rm -rf /`, mass deletes, or `Set-Content` via shell. Use dedicated file tools.
 - **No credential exfiltration:** never `cat ~/.envious/config`, never echo keys/tokens into logs.
 - **Build artifacts:** never commit `dist/`, `coverage.*`, `*.db`.
+- **GitHub issues first:** before fixing a reported problem or starting a feature, run `gh issue list --state open` and `gh issue view <n>` for matches; link the issue in commits/PRs and reuse its scope/decisions instead of redefining them.
 - **If blocked:** stop, state what evidence you have, what you tried, and ask — do not guess at APIs, URLs, or file paths.
 
 ## 9. Quick Triage
