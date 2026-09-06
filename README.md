@@ -5,6 +5,7 @@
 ![GitHub release](https://img.shields.io/github/v/release/marcuwynu23/envious)
 ![Go version](https://img.shields.io/badge/Go-1.21%2B%20%7C%201.25%2B-00ADD8?logo=go&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
 ![Echo](https://img.shields.io/badge/Echo-4B32C3)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue?logo=apache)
 ![Release CLI](https://github.com/marcuwynu23/envious/actions/workflows/release-cli.yml/badge.svg)
@@ -12,7 +13,7 @@
 ![Downloads](https://img.shields.io/github/downloads/marcuwynu23/envious/total)
 
 <strong>Multi-application environment variable manager.</strong>
-Stop scattering `.env` files across every service — run one SQLite-backed server with an admin dashboard and a CLI, and manage every app, environment, and variable (with versioning and optional encryption at rest) from a single place.
+Stop scattering `.env` files across every service — run one self-hosted server with an admin dashboard and a CLI, and manage every app, environment, and variable (with versioning and optional encryption at rest) from a single place. Starts on a zero-setup local database and grows into PostgreSQL when you need multiple instances.
 
 [Read the CLI guide →](cli/README.md) · [Read the server guide →](web/README.md)
 
@@ -33,7 +34,7 @@ Stop scattering `.env` files across every service — run one SQLite-backed serv
 
 ## What Is Envious?
 
-**Envious** is a self-hosted environment variable manager written in Go. One server (`envious-web`: REST API + server-rendered admin dashboard, SQLite storage) holds every application, environment, and variable; one CLI (`envious-cli`: Cobra, talks to the API) creates, lists, sets, exports, and imports them.
+**Envious** is a self-hosted environment variable manager written in Go. One server (`envious-web`: REST API + server-rendered admin dashboard, your choice of database) holds every application, environment, and variable; one CLI (`envious-cli`: Cobra, talks to the API) creates, lists, sets, exports, and imports them.
 
 ### What It Does
 
@@ -47,7 +48,7 @@ Stop scattering `.env` files across every service — run one SQLite-backed serv
 
 ### What It Does NOT Do
 
-- **Does not sync secrets to third parties** — Storage is your own SQLite file. No cloud account required
+- **Does not sync secrets to third parties** — Storage is yours: a local database file or your own PostgreSQL. No cloud account required
 - **Does not do per-user access control** — A single admin API key guards the whole API; every holder has full access
 - **Does not rotate secrets for you** — It stores and serves values; rotation happens by setting new values
 - **Does not execute your app** — It manages config; your application still reads its own environment
@@ -61,13 +62,13 @@ Stop scattering `.env` files across every service — run one SQLite-backed serv
 | Plaintext secrets on disk                            | Optional `ENCRYPTION_KEY` encrypts values at rest                                  |
 | Onboarding means copy-pasting secrets over chat      | New dev runs `login` + `var export <env>` and gets the exact working `.env`        |
 | Staging vs production drift                          | Environments are first-class (`dev`, `staging`, `prod` per app)                    |
-| Hand-rolled secret sharing for side projects         | Single binary + single SQLite file; runs on localhost or a small VPS              |
+| Hand-rolled secret sharing for side projects         | Single binary + embedded database; runs on localhost or a small VPS               |
 
 ### The Philosophy
 
 1. **Minimal setup, maximum value.** `go run ./cmd/server`, copy the printed key, `login` — managing variables in under a minute. No config file required on the server.
 2. **Your process stays yours.** Works as local binaries, Docker containers, or release assets — no SaaS dependency.
-3. **Boring technology.** SQLite, single admin key, plain `.env` format. Easy to back up (copy the `.db` file), easy to reason about.
+3. **Boring technology.** A familiar relational store, single admin key, plain `.env` format. Easy to back up, easy to reason about.
 
 ## Use Cases
 
@@ -76,13 +77,13 @@ Stop scattering `.env` files across every service — run one SQLite-backed serv
 | **Side-project secrets**  | One server tracks every project's dev/prod variables instead of a folder of `.env.backup` files    |
 | **Team onboarding**       | Teammates `login` once, then `var export` the environment they need — no secret sprawl in chat     |
 | **Multi-env deployments** | `dev`/`staging`/`prod` environments per app keep promotion explicit (`export` from one, `import`) |
-| **Homelab services**      | Single SQLite file backs up with everything else; dashboard edits beat SSH + `vim .env`            |
+| **Homelab services**      | One database to back up with everything else; dashboard edits beat SSH + `vim .env`            |
 | **CI/CD config**          | Pipelines fetch the environment via the CLI or API and write a `.env` at deploy time               |
 
 ## Benefits for Developers
 
 - **Single binary per piece** — `envious-server` and `envious` CLI, both pure Go with minimal dependencies
-- **Single-file storage** — SQLite means backups are `cp envious.db`; no separate database to operate
+- **Single-file option** — Start on the embedded database: backups are a file copy, no separate database to operate; switch to PostgreSQL when you scale
 - **Zero-config server start** — Sensible defaults (`:8080`, `./envious.db`); only `ENCRYPTION_KEY` is worth setting
 - **Familiar `.env` round-trip** — `export` produces what `import` (and your app) consumes
 - **Strict, helpful errors** — Invalid ids rejected client- and server-side; missing deletes return `404`, not false success
@@ -95,7 +96,7 @@ Stop scattering `.env` files across every service — run one SQLite-backed serv
 | ----------------------- | -------------------------------- | ---------------------- | --------------- | ------------------------------- |
 | **Setup time**          | ~1 minute                        | Zero (then chaos)      | Minutes–hours   | Minutes + account               |
 | **Self-hosted**         | Yes                              | Yes                    | Yes             | No                              |
-| **Infra to operate**    | 1 binary + 1 SQLite file         | None                   | Cluster know-how| None (SaaS)                     |
+| **Infra to operate**    | 1 binary (+ optional Postgres)   | None                   | Cluster know-how| None (SaaS)                     |
 | **Multi-app / multi-env** | Yes, first-class               | Manual folders         | Yes             | Yes                             |
 | **Versioning**          | Yes (per-variable counter)       | No (git-hack it)       | Yes             | Yes                             |
 | **Encryption at rest**  | Yes (optional key)               | No                     | Yes             | Yes                             |
@@ -192,8 +193,8 @@ Daily commands — the full reference lives in the **[User Guide](USER_GUIDE.md)
 ./envious var export 10 > .env
 ```
 
-Server defaults need no config file: `PORT=8080`, SQLite at
-`./envious.db`, JSON logs to stdout. Everything else — Postgres mode,
+Server defaults need no config file: `PORT=8080`, an embedded database at
+`./envious.db` (or your own PostgreSQL via one variable), JSON logs to stdout. Everything else — scaling,
 rate limits, audit queries, Fluent Bit, Kubernetes — is in the
 **[User Guide](USER_GUIDE.md)** (normal way + enterprise way).
 
@@ -246,7 +247,7 @@ make test-coverage    # coverage.out + coverage.html
 make dev              # go run ./cmd/server
 make dev-watch        # air hot-reload (needs .air.toml)
 make build            # → dist/envious-server
-make test             # go test ./... (first run compiles SQLite, allow minutes)
+make test             # go test ./... (first run takes a few minutes — dependency compile)
 ```
 
 Single tests: `go test -run TestAPIEnvCRUD -v ./internal/api/` (web), full details in [AGENTS.md](AGENTS.md).
@@ -265,11 +266,11 @@ envious/
 │   │   ├── view/           # table / version rendering
 │   │   └── model/          # domain models
 │   └── test/               # external test packages mirroring cmd/ + internal/
-├── web/                    # envious-web (Go 1.23+, Echo + SQLite) — its own Go module
+├── web/                    # envious-web (Go 1.25+, Echo + SQL storage) — its own Go module
 │   ├── cmd/server/main.go
 │   └── internal/
 │       ├── api/            # Echo server, REST + admin handlers, templates/, static/
-│       ├── storage/        # SQLite repository (apps/envs/vars/api_key)
+│       ├── storage/        # SQL repository, same API on SQLite and PostgreSQL
 │       ├── auth/           # API key init/verify (bcrypt)
 │       ├── middleware/     # Logging, Recovery, APIKeyAuth
 │       ├── config/         # PORT, DATABASE_PATH, ENCRYPTION_KEY, LOG_LEVEL
@@ -282,9 +283,9 @@ envious/
 
 ## Architecture
 
-- **Entrypoint** (`web/cmd/server/main.go`) — Loads env config, opens SQLite, ensures the admin key, serves Echo; graceful shutdown on `SIGINT`/`SIGTERM`
-- **Layered API** (`web/internal/api/server.go` → `storage/`) — Handlers do HTTP only (validation at the boundary, `ErrNotFound→404` / `ErrDuplicateKey→409`); all SQL lives in the repository
-- **Repository** (`web/internal/storage/sqlite.go`) — Apps/envs/vars/API-key queries with sentinel errors; AES value encryption when `ENCRYPTION_KEY` is set
+- **Entrypoint** (`web/cmd/server/main.go`) — Loads env config, opens the database, ensures the admin key, serves Echo; graceful shutdown on `SIGINT`/`SIGTERM`
+- **Layered API** (`web/internal/api/server.go` → `storage/`) — Handlers do HTTP only (validation at the boundary, `ErrNotFound→404` / `ErrDuplicateKey→409`); all database work lives in the repository
+- **Repository** (`web/internal/storage/`) — Apps, environments, variables, and API-key queries with sentinel errors; AES value encryption when `ENCRYPTION_KEY` is set
 - **Auth** (`web/internal/auth/`) — 32-byte random key from `crypto/rand`, bcrypt hash storage, constant-time compare; middleware (`APIKeyAuth`) guards `/api`, HMAC-signed cookie sessions guard the dashboard
 - **CLI** (`cli/cmd/` + `internal/`) — Cobra commands wire thinly to `client/`; `service/` holds pure logic, `view/` renders tables; shared `loadClient()`/`parseID()` helpers keep errors strict and safe
 - **Releases** (`.github/workflows/`) — Tags (`v*`) run vet+tests, then publish the GHCR image and the five CLI binaries with checksums
