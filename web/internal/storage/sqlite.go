@@ -104,6 +104,27 @@ func (s *Storage) migrate() error {
 	`); err != nil {
 		return err
 	}
+	if _, err := s.db.Exec(`
+		CREATE TABLE IF NOT EXISTS activity_logs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			actor TEXT NOT NULL,
+			action TEXT NOT NULL,
+			resource_type TEXT NOT NULL DEFAULT '',
+			resource_id INTEGER NOT NULL DEFAULT 0,
+			detail TEXT NOT NULL DEFAULT '',
+			ip TEXT NOT NULL DEFAULT '',
+			request_id TEXT NOT NULL DEFAULT ''
+		);
+	`); err != nil {
+		return err
+	}
+	if _, err := s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action)`); err != nil {
+		return err
+	}
+	if _, err := s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at)`); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -662,5 +683,70 @@ func indexOf(s, substr string) int {
 		}
 	}
 	return -1
+}
+
+// Activity is one audit-trail entry. Detail carries metadata only —
+// never secret values.
+type Activity struct {
+	ID           int64     `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	Actor        string    `json:"actor"`
+	Action       string    `json:"action"`
+	ResourceType string    `json:"resource_type"`
+	ResourceID   int64     `json:"resource_id"`
+	Detail       string    `json:"detail"`
+	IP           string    `json:"ip"`
+	RequestID    string    `json:"request_id"`
+}
+
+// LogActivity appends an audit-trail entry.
+func (s *Storage) LogActivity(ctx context.Context, actor, action, resourceType string, resourceID int64, detail, ip, requestID string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO activity_logs (actor, action, resource_type, resource_id, detail, ip, request_id)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		actor, action, resourceType, resourceID, detail, ip, requestID)
+	return err
+}
+
+// ListActivity returns recent audit entries, newest first. An empty action
+// matches all; limit <= 0 defaults to 100 and caps at 1000.
+func (s *Storage) ListActivity(ctx context.Context, action string, limit int) ([]Activity, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	if action == "" {
+		rows, err = s.db.QueryContext(ctx,
+			`SELECT id, created_at, actor, action, resource_type, resource_id, detail, ip, request_id
+			 FROM activity_logs ORDER BY id DESC LIMIT ?`, limit)
+	} else {
+		rows, err = s.db.QueryContext(ctx,
+			`SELECT id, created_at, actor, action, resource_type, resource_id, detail, ip, request_id
+			 FROM activity_logs WHERE action = ? ORDER BY id DESC LIMIT ?`, action, limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Activity
+	for rows.Next() {
+		var a Activity
+		var created string
+		if err := rows.Scan(&a.ID, &created, &a.Actor, &a.Action, &a.ResourceType, &a.ResourceID, &a.Detail, &a.IP, &a.RequestID); err != nil {
+			return nil, err
+		}
+		a.CreatedAt, _ = time.Parse(time.RFC3339Nano, created)
+		if a.CreatedAt.IsZero() {
+			a.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", created)
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
 }
 

@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"runtime"
 	"strconv"
@@ -52,6 +53,7 @@ func New(store *storage.Storage, secret []byte) *Server {
 	e := echo.New()
 	s := &Server{E: e, Store: store, secret: secret}
 	// Middlewares
+	e.Use(middleware.RequestID())
 	e.Use(middleware.Logging())
 	e.Use(middleware.Recovery())
 	// Templates
@@ -109,6 +111,7 @@ func (s *Server) registerRoutes() {
 	api.POST("/envs/:id/vars", s.handleSetVar)
 	api.PUT("/vars/:id", s.handleUpdateVarByID)
 	api.DELETE("/vars/:id", s.handleDeleteVarByID)
+	api.GET("/activity", s.handleListActivity)
 }
 
 // Template renderer
@@ -149,6 +152,29 @@ func (s *Server) verifySig(sig string) bool {
 	return hmac.Equal([]byte(sig), []byte(expected))
 }
 
+// audit records an audit-trail entry in the database and streams it to the
+// structured log (audit=true) so collectors receive it in real time.
+// Detail must carry metadata only — never secret values or API keys.
+// Storage failures are logged, never returned, so auditing can't break writes.
+func (s *Server) audit(c echo.Context, actor, action, resourceType string, resourceID int64, detail string) {
+	ip := c.RealIP()
+	reqID := middleware.FromContext(c)
+	if err := s.Store.LogActivity(c.Request().Context(), actor, action, resourceType, resourceID, detail, ip, reqID); err != nil {
+		slog.Warn("audit_write_failed", "action", action, "error", err.Error())
+		return
+	}
+	slog.Info("audit",
+		"audit", true,
+		"actor", actor,
+		"action", action,
+		"resource_type", resourceType,
+		"resource_id", resourceID,
+		"detail", detail,
+		"ip", ip,
+		"request_id", reqID,
+	)
+}
+
 // Handlers
 func (s *Server) handleVersion(c echo.Context) error {
 	return c.JSON(200, map[string]string{"version": s.appVersion()})
@@ -181,11 +207,13 @@ func (s *Server) handleLogin(c echo.Context) error {
 	hash, err := s.Store.GetAPIKeyHash(c.Request().Context())
 	ok := (err == nil && bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.APIKey)) == nil)
 	if !ok {
+		s.audit(c, "unknown", "auth.login_failed", "", 0, "")
 		if c.Request().Header.Get("Content-Type") == "application/json" {
 			return c.JSON(401, map[string]string{"error": "invalid api key"})
 		}
 		return s.render(c, 200, "login.html", map[string]any{"Error": "Invalid API key"})
 	}
+	s.audit(c, "admin", "auth.login", "", 0, "")
 	cookie := &http.Cookie{
 		Name:     "envious_auth",
 		Value:    s.sign("ok"),
@@ -203,6 +231,7 @@ func (s *Server) handleLogin(c echo.Context) error {
 }
 
 func (s *Server) handleLogout(c echo.Context) error {
+	s.audit(c, "admin", "auth.logout", "", 0, "")
 	c.SetCookie(&http.Cookie{
 		Name:     "envious_auth",
 		Value:    "",
@@ -212,6 +241,24 @@ func (s *Server) handleLogout(c echo.Context) error {
 		SameSite: http.SameSiteLaxMode,
 	})
 	return c.Redirect(302, "/")
+}
+
+func (s *Server) handleListActivity(c echo.Context) error {
+	action := c.QueryParam("action")
+	limit := 100
+	if v := c.QueryParam("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			limit = n
+		}
+	}
+	acts, err := s.Store.ListActivity(c.Request().Context(), action, limit)
+	if err != nil {
+		return c.JSON(500, map[string]string{"error": err.Error()})
+	}
+	if acts == nil {
+		acts = []storage.Activity{}
+	}
+	return c.JSON(200, acts)
 }
 
 func (s *Server) handleListApps(c echo.Context) error {
@@ -237,6 +284,7 @@ func (s *Server) handleCreateApp(c echo.Context) error {
 		}
 		return c.JSON(code, map[string]string{"error": err.Error()})
 	}
+	s.audit(c, "admin", "app.create", "app", id, "name="+body.Name)
 	return c.JSON(201, map[string]any{"id": id, "name": body.Name})
 }
 
@@ -266,6 +314,7 @@ func (s *Server) handleDeleteApp(c echo.Context) error {
 		}
 		return c.JSON(400, map[string]string{"error": err.Error()})
 	}
+	s.audit(c, "admin", "app.delete", "app", id, "")
 	return c.NoContent(204)
 }
 
@@ -300,6 +349,7 @@ func (s *Server) handleCreateEnvInApp(c echo.Context) error {
 		}
 		return c.JSON(code, map[string]string{"error": err.Error()})
 	}
+	s.audit(c, "admin", "env.create", "env", id, fmt.Sprintf("app_id=%d name=%s", appID, body.Name))
 	return c.JSON(201, map[string]any{"id": id, "app_id": appID, "name": body.Name})
 }
 
@@ -333,6 +383,7 @@ func (s *Server) handleCreateEnv(c echo.Context) error {
 		}
 		return c.JSON(code, map[string]string{"error": err.Error()})
 	}
+	s.audit(c, "admin", "env.create", "env", id, fmt.Sprintf("app_id=%d name=%s", body.AppID, body.Name))
 	return c.JSON(201, map[string]any{"id": id, "app_id": body.AppID, "name": body.Name})
 }
 
@@ -366,6 +417,7 @@ func (s *Server) handleDeleteEnv(c echo.Context) error {
 		}
 		return c.JSON(500, map[string]string{"error": err.Error()})
 	}
+	s.audit(c, "admin", "env.delete", "env", id, "")
 	return c.NoContent(204)
 }
 
@@ -401,6 +453,8 @@ func (s *Server) handleSetVar(c echo.Context) error {
 		}
 		return c.JSON(code, map[string]string{"error": err.Error()})
 	}
+	// Never log the value — key identity only.
+	s.audit(c, "admin", "var.set", "var", v.ID, fmt.Sprintf("env=%d key=%s", envID, body.Key))
 	return c.JSON(200, v)
 }
 
@@ -422,6 +476,7 @@ func (s *Server) handleUpdateVarByID(c echo.Context) error {
 		}
 		return c.JSON(500, map[string]string{"error": err.Error()})
 	}
+	s.audit(c, "admin", "var.update", "var", id, "")
 	return c.JSON(200, v)
 }
 
@@ -437,6 +492,7 @@ func (s *Server) handleDeleteVarByID(c echo.Context) error {
 	if err := s.Store.DeleteVar(c.Request().Context(), envID, key); err != nil {
 		return c.JSON(500, map[string]string{"error": err.Error()})
 	}
+	s.audit(c, "admin", "var.delete", "var", id, fmt.Sprintf("env=%d key=%s", envID, key))
 	return c.NoContent(204)
 }
 
@@ -451,14 +507,18 @@ func (s *Server) handleAdminCreateApp(c echo.Context) error {
 	if name == "" {
 		return c.Redirect(302, "/")
 	}
-	_, _ = s.Store.CreateApp(c.Request().Context(), name)
+	if id, err := s.Store.CreateApp(c.Request().Context(), name); err == nil {
+		s.audit(c, "admin", "app.create", "app", id, "name="+name+" via=dashboard")
+	}
 	return c.Redirect(302, "/")
 }
 
 func (s *Server) handleAdminDeleteApp(c echo.Context) error {
 	id, err := parseIDParam(c, "id")
 	if err == nil {
-		_ = s.Store.DeleteApp(c.Request().Context(), id)
+		if err := s.Store.DeleteApp(c.Request().Context(), id); err == nil {
+			s.audit(c, "admin", "app.delete", "app", id, "via=dashboard")
+		}
 	}
 	return c.Redirect(302, "/")
 }
@@ -556,7 +616,7 @@ func (s *Server) handleAdminCreateEnv(c echo.Context) error {
 			"Error": "Environment name is required",
 		})
 	}
-	if _, err := s.Store.CreateEnv(c.Request().Context(), appID, name); err != nil {
+	if envID, err := s.Store.CreateEnv(c.Request().Context(), appID, name); err != nil {
 		app, _ := s.Store.GetApp(c.Request().Context(), appID)
 		envs, _ := s.Store.ListEnvs(c.Request().Context(), appID)
 		msg := err.Error()
@@ -568,6 +628,8 @@ func (s *Server) handleAdminCreateEnv(c echo.Context) error {
 			"Envs":  envs,
 			"Error": msg,
 		})
+	} else {
+		s.audit(c, "admin", "env.create", "env", envID, fmt.Sprintf("app_id=%d name=%s via=dashboard", appID, name))
 	}
 	return c.Redirect(302, "/apps/"+c.Param("id"))
 }
@@ -575,7 +637,9 @@ func (s *Server) handleAdminCreateEnv(c echo.Context) error {
 func (s *Server) handleAdminDeleteEnv(c echo.Context) error {
 	id, err := parseIDParam(c, "envID")
 	if err == nil {
-		_ = s.Store.DeleteEnv(c.Request().Context(), id)
+		if err := s.Store.DeleteEnv(c.Request().Context(), id); err == nil {
+			s.audit(c, "admin", "env.delete", "env", id, "via=dashboard")
+		}
 	}
 	return c.Redirect(302, "/apps/"+c.Param("id"))
 }
@@ -588,7 +652,9 @@ func (s *Server) handleAdminCreateVar(c echo.Context) error {
 	key := c.FormValue("key")
 	val := c.FormValue("value")
 	if key != "" {
-		_, _ = s.Store.SetVar(c.Request().Context(), envID, key, val)
+		if v, err := s.Store.SetVar(c.Request().Context(), envID, key, val); err == nil {
+			s.audit(c, "admin", "var.set", "var", v.ID, fmt.Sprintf("env=%d key=%s via=dashboard", envID, key))
+		}
 	}
 	return c.Redirect(302, "/apps/"+c.Param("appID")+"/envs/"+c.Param("envID"))
 }
@@ -598,7 +664,9 @@ func (s *Server) handleAdminDeleteVar(c echo.Context) error {
 	if err == nil {
 		key := c.Param("key")
 		if key != "" {
-			_ = s.Store.DeleteVar(c.Request().Context(), envID, key)
+			if err := s.Store.DeleteVar(c.Request().Context(), envID, key); err == nil {
+				s.audit(c, "admin", "var.delete", "var", 0, fmt.Sprintf("env=%d key=%s via=dashboard", envID, key))
+			}
 		}
 	}
 	return c.Redirect(302, "/apps/"+c.Param("appID")+"/envs/"+c.Param("envID"))
@@ -612,7 +680,9 @@ func (s *Server) handleAdminUpdateVar(c echo.Context) error {
 	key := c.Param("key")
 	val := c.FormValue("value")
 	if key != "" {
-		_, _ = s.Store.SetVar(c.Request().Context(), envID, key, val)
+		if v, err := s.Store.SetVar(c.Request().Context(), envID, key, val); err == nil {
+			s.audit(c, "admin", "var.set", "var", v.ID, fmt.Sprintf("env=%d key=%s via=dashboard", envID, key))
+		}
 	}
 	return c.Redirect(302, "/apps/"+c.Param("appID")+"/envs/"+c.Param("envID"))
 }
@@ -635,6 +705,7 @@ func (s *Server) handleAdminImportVars(c echo.Context) error {
 
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 64*1024), 1024*1024)
+	imported := 0
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -649,9 +720,12 @@ func (s *Server) handleAdminImportVars(c echo.Context) error {
 		if key == "" {
 			continue
 		}
-		_, _ = s.Store.SetVar(c.Request().Context(), envID, key, val)
+		if _, err := s.Store.SetVar(c.Request().Context(), envID, key, val); err == nil {
+			imported++
+		}
 	}
 	_ = sc.Err()
+	s.audit(c, "admin", "var.import", "env", envID, fmt.Sprintf("vars=%d via=dashboard", imported))
 
 	return c.Redirect(302, "/apps/"+c.Param("appID")+"/envs/"+c.Param("envID"))
 }
