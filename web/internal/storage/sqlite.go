@@ -313,8 +313,18 @@ func (s *Storage) DeleteApp(ctx context.Context, id int64) error {
 	if id == 1 {
 		return fmt.Errorf("cannot delete default application")
 	}
-	_, err := s.db.ExecContext(ctx, "DELETE FROM applications WHERE id = ?", id)
-	return err
+	res, err := s.db.ExecContext(ctx, "DELETE FROM applications WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // Environments
@@ -377,8 +387,18 @@ func (s *Storage) GetEnv(ctx context.Context, id int64) (*env.Environment, error
 }
 
 func (s *Storage) DeleteEnv(ctx context.Context, id int64) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM environments WHERE id = ?", id)
-	return err
+	res, err := s.db.ExecContext(ctx, "DELETE FROM environments WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // Variables
