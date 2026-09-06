@@ -1,0 +1,15 @@
+# Non-secret configuration. Copy values from the docs; edit in place.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envious-config
+  namespace: envious
+data:
+  PORT: "8080"
+  # sqlite (single replica + pvc.yaml) or postgres (external/managed,
+  # replicas > 1, drop the volume claim).
+  DB_DRIVER: "sqlite"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  RATE_LIMIT_RPS: "20"
+  RATE_LIMIT_BURST: "40"

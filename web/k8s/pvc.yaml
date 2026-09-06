@@ -1,0 +1,12 @@
+# Persistent storage for the sqlite backend (single replica only).
+# Not needed when DB_DRIVER=postgres (delete this file from your apply set).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: envious-data
+  namespace: envious
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envious-web
+  namespace: envious
+  labels:
+    app.kubernetes.io/name: envious
+spec:
+  replicas: 1 # sqlite backend: keep 1 (ReadWriteOnce). postgres: raise freely.
+  strategy:
+    type: Recreate # sqlite backend: never run two writers. postgres: switch to RollingUpdate.
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: envious
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: envious
+    spec:
+      containers:
+        - name: server
+          image: ghcr.io/marcuwynu23/envious-web:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: envious-config
+            - secretRef:
+                name: envious-secrets
+          env:
+            - name: DATABASE_PATH
+              value: /data/envious.db
+          volumeMounts:
+            - name: data # drop for postgres backend
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      volumes:
+        - name: data # drop for postgres backend
+          persistentVolumeClaim:
+            claimName: envious-data

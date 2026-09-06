@@ -1,12 +1,56 @@
-version: "3.9"
+# Envious deployment.
+#
+# Default (SQLite, zero dependencies):
+#   docker compose up --build
+#
+# Postgres (multi-instance ready):
+#   DB_DRIVER=postgres DATABASE_URL=postgres://envious:envious@db:5432/envious?sslmode=disable \
+#     docker compose --profile postgres up --build
 services:
   envious:
     build: .
+    image: envious-web:local
     ports:
       - "${PORT-8080}:8080"
     environment:
       - PORT=8080
       - DATABASE_PATH=/data/envious.db
+      - DB_DRIVER=${DB_DRIVER-sqlite}
+      - DATABASE_URL=${DATABASE_URL-}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY-}
+      - LOG_LEVEL=${LOG_LEVEL-info}
+      - LOG_FORMAT=${LOG_FORMAT-json}
+      - RATE_LIMIT_RPS=${RATE_LIMIT_RPS-20}
+      - RATE_LIMIT_BURST=${RATE_LIMIT_BURST-40}
     volumes:
       - ./data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
 
+  db:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER-envious}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD-envious}
+      - POSTGRES_DB=${POSTGRES_DB-envious}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER-envious}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
